@@ -1,0 +1,203 @@
+body {
+  margin: 0;
+}
+canvas {
+  display: block;
+  box-shadow: 0px 0px 0px 2px;
+}
+.noselect {
+-webkit-touch-callout: none;
+  -webkit-user-select: none;
+   -khtml-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
+        }
+
+.nodrag {
+  user-drag: none;
+  -webkit-user-drag: none;
+}
+
+
+.panel {
+  position: absolute;
+  left:0px;
+  right:0px;
+  top:0px;
+  height:64px;
+}
+
+.button {
+  transition: all 0.05s;
+  display: inline-block;
+  border-radius: 4px;
+  width:32px;
+  height:32px;
+  margin:2px;
+  background-color : #ddd;
+
+  box-shadow: -1px -1px 1px 1px black inset, 1px 1px 1px 1px white inset;
+}
+.button:hover {
+  background-color : #eee;
+}
+.button:active {
+  background-color : white;
+  box-shadow: 1px 1px 1px 1px black inset, -1px -1px 1px 1px white inset;
+}
+.button.down {
+  background-color : #FFF;
+  box-shadow: 1px 1px 1px 1px black inset, -1px -1px 1px 1px white inset;
+}
+#palette {
+  position:absolute;
+  left:0px;
+  top:64px;
+  width:80px;
+  bottom:0px;
+}
+.paletteentry {
+    width :32px;
+    height :32px;
+    display:inline-block;
+    border:1px solid black;
+    margin : 3px;
+}
+
+#workspace{
+  position:absolute;
+  left:88px;
+  right:0px;
+  top:70px;
+  bottom:0px;
+  overflow:hidden;
+  background-color:lightgrey;
+  margin: 4px;
+  box-shadow: 0px 0px 2px 2px black;
+}
+.pic {
+  cursor:crosshair;
+  background-color:White;
+  background-image: linear-gradient(rgba(32,100,150,.05), transparent 2px),
+  linear-gradient(90deg, rgba(32,100,150,.05) 2px, transparent 2px),
+  linear-gradient(rgba(32,100,150,.1) 1px, transparent 1px),
+  linear-gradient(90deg, rgba(32,100,150,.1) 1px, transparent 1px);
+  background-size:100px 100px, 100px 100px, 20px 20px, 20px 20px;
+  background-position:-2px -2px, -2px -2px, -1px -1px, -1px -1px;
+
+  transition: transform 0.5s;
+
+  position:absolute;
+  margin: auto;
+  left:0px;
+  top:0px;
+  image-rendering:pixelated;
+  image-rendering:-moz-crisp-edges;
+  transform : scale(2,2);
+  transition: transform 0.15s;
+
+  transform-origin: top left;
+  transform: translate(var(--translateX),var(--translateY))  scale(var(--scalefactor) )
+}
+
+input[type="color"] {
+  width:48px;
+  height:32px;
+  padding:0px;
+  background:none;
+  border:none;
+  outline:none;
+}
+#foreground {
+  position: absolute;
+  bottom : 32px;
+  left : 12px;
+  z-index : 1;
+}
+#background {
+  position: absolute;
+  bottom : 20px;
+  left : 24px;
+}
+#global_overlay {
+  z-index: 1111;
+}
+
+.fillparent {
+  position:absolute;
+  bottom:0px;
+  top:0px;
+  left:0px;
+  right:0px;
+}
+#save {
+  position:absolute;
+  top:0px;
+  bottom:0px;
+  right:0px;
+}
+.pic>.eventoverlay {
+  transform: translate(-0.5px,-0.5px);
+}
+
+.pic>.eventoverlay::before {
+  content: "label";
+  position: absolute;
+  height: 19px;
+  display: inline-block;
+  top: -21px;
+  transform-origin: left;
+  background-color: palegoldenrod;
+  border-radius: 0 11px 0 0;
+  padding-left: 8px;
+  padding-right: 17px;
+  box-shadow: 0px 0px 0px 2px;
+  font-family: sans-serif;
+}
+
+.pic[data-z="1"]>.eventoverlay::before {
+  background-color: orange;
+}
+
+.parameters textarea {
+  width : 47%;
+  height :4em;
+  display: inline-block;
+  border-top :16px solid #aa42;
+  height: 100%;
+}
+
+.parameters label {
+  margin-left:8px;
+  font-family: sans-serif;
+  font-size:14px;
+  position: absolute;
+
+} 
+.parameters {
+  z-index:2;
+  overflow: visible;
+  width: 50%;
+  display: inline-block;
+  position: absolute;
+  right: 0px;
+  top: 0px;
+}
+
+.diameter_control {
+  display:inline-block;
+}
+
+.sidebutton {
+  width: 32px;
+  height: 32px;
+  border: 2px solid black;
+  position: absolute;
+  background-color: green;
+  right: -36px;
+  top: 0px;
+}
+.sidebutton.output {
+  background: radial-gradient(ellipse at center, #ffffff 0%,#f4ff60 11%,#f4ff60 11%,#80c217 57%,#008000 100%);
+}
