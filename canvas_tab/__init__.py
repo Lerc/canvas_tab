@@ -10,9 +10,14 @@ import numpy as np
 
 cwd_path = os.path.dirname(os.path.realpath(__file__))
 
+local_path = os.path.dirname(__file__) 
+
 relative_target_path = "../../custom_nodes/canvas_tab/web/"
-link_path = os.path.join(cwd_path, '..', '..', 'web', 'extensions', 'canvas_tab')
+
+link_path = os.path.normpath(os.path.join(local_path, '..', '..', 'web', 'extensions', 'canvas_tab'))
+
 if not os.path.exists(link_path):
+    print(f"{link_path} not present, creating symlink to  {relative_target_path}")
     os.symlink(relative_target_path, link_path)
 
 
@@ -57,6 +62,7 @@ class Canvas_Tab:
     def INPUT_TYPES(s):
         return {
             "required": {
+                "mask": ("CANVAS",),                                
                 "canvas": ("CANVAS",),
             }, 
             "hidden": {
@@ -77,7 +83,7 @@ class Canvas_Tab:
 
     CATEGORY = "MuckingAround"
 
-    def image_buffer(self, unique_id, canvas, images=None):
+    def image_buffer(self, unique_id, mask, canvas, images=None):
         print("image_buffer triggered")
 
         collected_images = list()
@@ -90,8 +96,9 @@ class Canvas_Tab:
 
 
         image_path = folder_paths.get_annotated_filepath(canvas)
-        print(f'image_path: {image_path}')
-
+        print("image path")
+        print(image_path)
+        
         i = Image.open(image_path)
         i = ImageOps.exif_transpose(i)
 
@@ -100,16 +107,24 @@ class Canvas_Tab:
         rgb_image = np.array(rgb_image).astype(np.float32) / 255.0
         rgb_image = torch.from_numpy(rgb_image)[None,]
 
+
+        mask_path = folder_paths.get_annotated_filepath(mask)
+        print("mask path")
+        print(mask_path)
+        
+        i = Image.open(mask_path)
+        i = ImageOps.exif_transpose(i)
+
         if 'A' in i.getbands():
-            mask = np.array(i.getchannel('A')).astype(np.float32) / 255.0
-            mask = 1. - torch.from_numpy(mask)
+            mask_data = np.array(i.getchannel('A')).astype(np.float32) / 255.0
+            mask_data = 1. - torch.from_numpy(mask_data)
         else:
-            mask = torch.zeros((64,64), dtype=torch.float32, device="cpu")
+            mask_data = torch.zeros((64,64), dtype=torch.float32, device="cpu")
 
 
-        print(f'rgb_image: {rgb_image}')
+        
 
-        return { "ui": {"collected_images":collected_images},  "result": (rgb_image, mask) }
+        return { "ui": {"collected_images":collected_images},  "result": (rgb_image, mask_data) }
 
         #return (canvas,)
 

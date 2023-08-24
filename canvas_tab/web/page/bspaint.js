@@ -7,7 +7,13 @@ if (location.pathname.includes("/page/")) {
   $(initPaint);
 }
 
+CanvasRenderingContext2D.prototype.getAllImageData = function()  {
+  return this.getImageData(0,0,this.canvas.width,this.canvas.height)
+}
 
+CanvasRenderingContext2D.prototype.setAllImageData = function(imageData)  {
+  return this.putImageData(imageData,0,0)
+}
 
 var initialPalette = [
   "#000000","#ffffff",
@@ -25,9 +31,11 @@ var tip = {
     lastY : 0,
     x : 0.0,
     y : 0.0,
+    color : "black",
     size : 5,
-    colour : "green"
+    drawOperation : feltTip,
   }
+
 
 var pen=feltTip;
 
@@ -37,6 +45,12 @@ var picStack = [];
 
 var activePic;
 
+function setActivePic(newValue) {
+  activePic=newValue;
+  activePic.bringToFront();
+  updateLayerList()
+
+}
 var dragging = false;
 
 
@@ -46,32 +60,57 @@ var dragStartY;
 
 function setExportPic(pic) {
   selectedExport=pic;
-
+  
   $(".sidebutton").removeClass("output")
   const button=pic.element.querySelector(".sidebutton");
   button.classList.add("output");
 
   pic.commit();
+  
+  transmitMask(pic.mask.canvas);
 }
 
-
+var lastUsedMaskColor = "#402040";
 
 class Layer {
   canvas = document.createElement("canvas");
   ctx = this.canvas.getContext("2d",{willReadFrequently:true});
   mask = false;
   visible = true;
-  constructor (baseCanvas, mask = false)  {
-    this.canvas.width=baseCanvas.width;
-    this.canvas.height=baseCanvas.height;
+  composite = "source-over";
+  opacity = 1;
+  _maskColor = lastUsedMaskColor;
+  constructor (title, {width,height}, mask = false)  {
+    this.canvas.width=width;
+    this.canvas.height=height;
     this.mask = mask;
+    this.title= title;
+    if (mask) {
+      this.composite="source-over";
+    }
+  }
+  get maskColor() {
+    return this._maskColor;
+  }
+  set maskColor(newValue) { 
+    this._maskColor=newValue;
+    if (this.mask) {
+      this.ctx.save();
+      this.ctx.globalCompositeOperation="source-atop"; 
+      this.ctx.fillStyle=newValue;
+      this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+      this.ctx.restore();
+    }
   }
 }
 
-function blankCanvas(width=512, height=width) {
+function blankCanvas(width=512, height=width, filled=true) {
   const canvas = document.createElement("canvas");
   canvas.width=width;
   canvas.height=height;
+  const ctx=canvas.getContext("2d");
+  ctx.fillStyle="white";
+  ctx.fillRect(0,0,width,height);
   return canvas;
 }
 
@@ -96,13 +135,14 @@ function createDrawArea(canvas = blankCanvas()) {
   activeOperationCanvas.ctx = activeOperationCanvas.getContext("2d",{willReadFrequently:true});
   
 
-  const image = canvas.ctx.getImageData(0,0,canvas.width,canvas.height)
+  const image = canvas.ctx.getAllImageData();
   const undo = [];
   const redo = [];
   const layers = [];
 
-  layers.push( new Layer(canvas));
-  layers.push( new Layer(canvas,true));
+  layers.push( new Layer("base", canvas));
+  const mask =new Layer("mask", canvas,true);
+  layers.push(mask);
   
   layers[0].ctx.putImageData(image,0,0);
   activeOperationCanvas.ctx.putImageData(image,0,0);
@@ -113,7 +153,7 @@ function createDrawArea(canvas = blankCanvas()) {
   eventOverlay.addEventListener("contextmenu",function(e){e.preventDefault(); return false;});
  
   
-  const result = {element,eventOverlay,image,layers,canvas,
+  const result = {element,eventOverlay,image,layers,canvas,mask,
     scale:1,
     scalefactor:0,
     offsetX:0,
@@ -136,7 +176,7 @@ function createDrawArea(canvas = blankCanvas()) {
         picStack.splice(oldPos,1);
       }
       picStack.unshift(this);
-      let z = 1;
+      let z = 100;
       for (const {element} of picStack) {
         element.style.zIndex=z;
         element.setAttribute("data-z",z);
@@ -144,23 +184,28 @@ function createDrawArea(canvas = blankCanvas()) {
       }
     },
 
-    composite() {
+    composite(suppressMask=false) {
+      canvas.ctx.save();
       canvas.ctx.clearRect(0,0,canvas.width,canvas.height)
       for (const layer of this.layers) {
-        if (layer===this.activeLayer) {
+        if (suppressMask && this.mask==layer) continue;
+        canvas.ctx.globalAlpha = layer.opacity;
+        canvas.ctx.globalCompositeOperation=layer.composite;
+        if (this.isDrawing && layer===this.activeLayer) {
           canvas.ctx.drawImage(activeOperationCanvas,0,0);          
         } else {
           canvas.ctx.drawImage(layer.canvas,0,0);
 
         }
       }
+      canvas.ctx.restore();
     },
 
     commit() {
-      let data = activeOperationCanvas.ctx.getImageData(0,0,canvas.width,canvas.height);
+      let data = activeOperationCanvas.ctx.getAllImageData()
       const undoRecord = {
         layer: this.activeLayer,
-        data: this.activeLayer.ctx.getImageData(0,0,canvas.width,canvas.height)
+        data: this.activeLayer.ctx.getAllImageData()
       }
       undo.push(undoRecord);
       if (undo.length > undoDepth) undo.shift();
@@ -168,14 +213,24 @@ function createDrawArea(canvas = blankCanvas()) {
 
       this.activeLayer.ctx.putImageData(data,0,0);
       this.isDrawing = false;
-      this.composite();
       if (selectedExport===this) {
-        transmitCanvas(canvas);
+        if (this.activeLayer===this.mask) {
+          transmitMask(this.mask.canvas);
+        } else {
+          this.composite(true);
+          transmitCanvas(canvas);          
+        }
+        
       }
+      if (activePic===this) {  
+        updateLayerList();  //inefficient to remake all controls on edit,  fix this
+      }
+      this.composite();
+
     },
 
     startDraw(x,y) {
-      let data = this.activeLayer.ctx.getImageData(0,0,canvas.width,canvas.height);
+      let data = this.activeLayer.ctx.getAllImageData()
       activeOperationCanvas.ctx.putImageData(data,0,0);
       this.isDrawing=true;
       tip.x=x;
@@ -193,7 +248,15 @@ function createDrawArea(canvas = blankCanvas()) {
       tip.lastY=tip.y;
       tip.x=x;
       tip.y=y;
-      if (pen) pen(activeOperationCanvas.ctx,tip);
+      if (tip.drawOperation) tip.drawOperation(activeOperationCanvas.ctx,tip);
+      if (this.activeLayer.mask) {
+        const ctx=activeOperationCanvas.ctx;
+        ctx.save();
+        ctx.globalCompositeOperation="source-atop";
+        ctx.fillStyle = this.activeLayer.maskColor;
+        ctx.fillRect(0,0,activeOperationCanvas.width,activeOperationCanvas.height);
+        ctx.restore();
+      }
       this.composite();
     }
   
@@ -201,9 +264,8 @@ function createDrawArea(canvas = blankCanvas()) {
   eventOverlay.pic = result;
   sidebar.addEventListener("mousedown",_=>  setExportPic(result))
 
-  activePic=result;
   result.setTransform();
-  result.bringToFront();
+  setActivePic(result)
   return result;
 }
 
@@ -215,6 +277,7 @@ function initPaint(){
     const e=`<div class="paletteentry" style="background-color:${i}"> </div>`;
     palette.append($(e).data("colour",i));
   }
+  poulateLayerControl();
   $(".background")[0].addEventListener("wheel",handleMouseWheel);
 
   $(".paletteentry").on("mousedown", function(e) {
@@ -247,7 +310,6 @@ function initPaint(){
 
   brushSizeControl.addEventListener("changed", e=> {
     tip.size=brushSizeControl.diameter;
-    console.log("radius_changed");
   });
 
 
@@ -279,12 +341,17 @@ function addNewImage(image) {
 }
 
 function handleMouseDown(e) {
-  console.log("mousedown on pic",e);
+  //console.log("mousedown on pic",e);
   let pic = e.currentTarget.pic;
-  pic.bringToFront();
+  setActivePic(pic);
+  
+  const maskLayer = activePic.activeLayer.mask
+
+  
   switch (e.button) {
     case 0:
-      tip.colour = $("#foreground").val();
+      tip.drawOperation = pen;
+      tip.colour = maskLayer?"#000":$("#foreground").val();
       pic.startDraw(e.offsetX,e.offsetY);
       createCaptureOverlay(e.currentTarget)
       break;
@@ -295,13 +362,13 @@ function handleMouseDown(e) {
       mouseDownX=e.clientX;
       mouseDownY=e.clientY;
       $(e.currentTarget.pic.element).css("transition" , "none");
-      dragging = true;
-      console.log({dragging})
+      dragging = true;      
       createCaptureOverlay(e.currentTarget)
 
       break;
     case 2:
       tip.colour = $("#background").val();
+      tip.drawOperation = maskLayer?eraserTip:pen;
       pic.startDraw(e.offsetX,e.offsetY);
       createCaptureOverlay(e.currentTarget)
 
@@ -527,7 +594,7 @@ function brushDiameterControl(id="diameter") {
       ctx.arc(radius*radiusDivider,max_radius,radius,0,Math.PI*2);
       ctx.fillStyle="#000";
       ctx.fill();    
-      ctx.fillText(diameter,3,10);
+      ctx.fillText(diameter,8,10);
   }
 
   Object.defineProperty(element, 'radius', {
@@ -583,6 +650,124 @@ function brushDiameterControl(id="diameter") {
   redraw();
   return element
 }
+
+
+function poulateLayerControl() {
+  const layer_control = document.querySelector("#layer_control");
+  const content = $(`
+    <div class="layer-attributes">
+      <div class="imageLayer">      
+      <select class="composite-mode">
+        <option value="source-over">Color</option>
+        <option value="lighter">Lighter</option>
+        <option value="multiply">Multiply</option>
+        <option value="screen">Screen</option>
+        <option value="overlay">Overlay</option>
+        <option value="lighten">Lighten</option>
+        <option value="darken">Darken</option>
+        <option value="color-dodge">Color Dodge</option>
+        <option value="color-burn">Color Burn</option>
+        <option value="hard-light">Hard Light</option>
+        <option value="soft-light">Soft Light</option>
+        <option value="difference">Difference</option>
+        <option value="exclusion">Exclusion</option>
+        <option value="hue">Hue</option>
+        <option value="saturation">Saturation</option>
+        <option value="color">Color</option>
+        <option value="luminosity">Luminosity</option>        
+      </select>
+      </div>
+      <div class="maskLayer">
+        <input type="color" class="maskColor" value="#402040" />
+      </div>
+      <div>
+      <label for="opacity">Opacity</label>
+      <input type="range" class="opacity" name="opacity" min="0" max="100" step="1" value="100" />
+      </div>
+    </div>
+    <div class="layer_list">
+  
+    </div> 
+    <div class="layer_actions">    
+    </div>
+  `)
+
+  $(layer_control).append(content);
+
+  $("input.maskColor").on("change", e=>{
+    lastUsedMaskColor = e.currentTarget.value;
+    activePic.activeLayer.maskColor=lastUsedMaskColor;
+    activePic.composite();
+    updateLayerList();
+  });
+
+  $("input.opacity").on("input", e=> {
+    activePic.activeLayer.opacity = e.currentTarget.value/100;    
+    activePic.composite();
+  });
+
+}
+
+function updateLayerList() {
+  function makeLayerWidget(layer) {    
+    const pic=activePic;
+    const result = $(`<div class="layer_widget ${layer===pic.activeLayer?'active':''}">
+        <div class= "visibilitybox ${layer.visible?'showing':''}"> </div> 
+        <canvas class="thumbnail" width="32" height="32"> </canvas>
+        <div class="layer_name"> ${layer.title} </div>
+        ${layer.mask?`<div class="checkbox ${pic.mask===layer?'checked':''}"></div>`:''}
+      </div>
+    `)[0];
+  
+    window.dummyGlobal=result;
+    const canvas = result.querySelector(".thumbnail");    
+    const ctx=canvas.getContext("2d");
+    ctx.drawImage(layer.canvas,0,0,canvas.width,canvas.height);  
+    result.layer=layer;
+
+    result.querySelector(".visibilitybox").onmousedown = e => {
+      e.stopPropagation();
+      layer.visible=!layer.visible;
+      updateLayerList();
+    }
+
+    if (layer.mask) {
+        result.querySelector(".checkbox").onmousedown = e => {
+          e.stopPropagation();
+          pic.mask= (pic.mask===layer) ? null : layer;
+          updateLayerList();
+      }
+    }
+    result.onmousedown = e=> {
+      if (e.button==0) {      
+        pic.activeLayer=layer;
+        updateLayerList()
+      }
+    }
+
+    return result;
+  };
+  
+
+  const layer_control=document.querySelector("#layer_control") 
+  const layer_list =layer_control.querySelector(".layer_list") 
+  const newControls = activePic.layers.map(makeLayerWidget);
+
+  while(layer_list.firstChild) layer_list.removeChild(layer_list.firstChild)
+
+  newControls.reverse().forEach(element=>layer_list.appendChild(element))  
+
+  $(".layer-attributes").toggleClass("mask", activePic.activeLayer.mask)
+
+  lastUsedMaskColor=activePic.activeLayer.maskColor;
+  $("input.maskColor").val(lastUsedMaskColor)
+  $("input.opacity").val((activePic.activeLayer.opacity*100)|0)
+
+
+}
+
+
+
 
 function cloneEvent(event, modifications = {}) {
   let eventProperties = {

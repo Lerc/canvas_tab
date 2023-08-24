@@ -39,10 +39,22 @@ let drawColor = 'orange';  // default to black
 let portToMain; // variable to hold the MessageChannel port
 
 function transmitCanvas(canvas) {
-  if (portToMain) {
-      canvas.toBlob( blob=>{portToMain.postMessage(blob)} );
+    if (portToMain) {
+        canvas.toBlob( blob=>{
+          portToMain.postMessage( {"image": blob} );      
+        });
+      }
   }
-}
+
+function transmitMask(canvas) {
+    if (portToMain) {
+        canvas.toBlob( blob=>{
+          portToMain.postMessage( {"mask": blob} );      
+        });
+      }
+  }
+
+  
 /*
 canvas.addEventListener('mousedown', (e) => {
     if (e.button === 0) {
@@ -87,9 +99,9 @@ canvas.addEventListener('contextmenu', (e) => {
 
 function loadImagefromURL(url) {
   var img = new Image();
-  img.onload = function() {
+  img.onload = function() {    
     setExportPic(addNewImage(img));
-
+    
   };
   img.src = url;
 }

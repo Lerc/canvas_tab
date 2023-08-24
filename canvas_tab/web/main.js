@@ -49,15 +49,10 @@ app.registerExtension({
   },
 
   async beforeRegisterNodeDef(nodeType, nodeData, app) {
-    if (nodeData.name==="Canvas_Tab") {
-      console.log("registering node definition",{nodeData,nodeType});
-    }
   },
   getCustomWidgets(app) {
-    console.log("asked for custom widgets for canvas");
     return {
       CANVAS(node,inputName,inputData,app) {
-        console.log("making CANVAS widget");
         return addCanvasWidget(node,inputName,inputData, app)
       } 
     }
@@ -79,7 +74,12 @@ function initEditorNode(node)
   node.collected_images = [];
   node.addWidget("button","Edit","bingo", (widget,graphCanvas, node, {x,y}, event) => openOrFocusEditor(node));
 
-  node.widgets.reverse();// because CANVAS is auto created first
+  node.widgets.reverse();// because auto created widget get put in first
+
+  node.canvasWidget = node.widgets[1];
+  node.maskWidget=node.widgets[2];
+  
+  node.maskWidget.onTopOf = node.canvasWidget;
 
   node.onExecuted = (output)=> {
     if (output?.collected_images && editor.channel) {
@@ -96,7 +96,6 @@ function openOrFocusEditor() {
           //if clientPage is set, there might be a new page to replace the lost one
           setSignal('findImageEditor')
           setTimeout(_=>{
-              console.log("one second after click")
               if (checkAndClear("findImageEditor")) {                    
                   //if the flag is still set by here, assume there's no-one out there
                   editor.window = window.open('/extensions/canvas_tab/page/index.html', plugin_name);                  
@@ -174,6 +173,7 @@ function addCanvasWidget(node,name,inputData,app) {
     name,
     size: [128,128],
     image: null,
+    background :"#8888",
     _value : "",
     get value() {
       return this._value 
@@ -182,9 +182,14 @@ function addCanvasWidget(node,name,inputData,app) {
       this._value=newValue
     },
     draw(ctx, node, width, y) {
-      const [nodeWidth,nodeHeight] = node.size;
-       ctx.fillStyle = "#8888";
-       ctx.fillRect(0,y,width,nodeHeight-y);   
+      let [nodeWidth,nodeHeight] = node.size;
+      if (this.onTopOf) {
+        y= this.onTopOf.last_y;
+
+      } else {
+        ctx.fillStyle = this.background;
+        ctx.fillRect(0,y,width,nodeHeight-y);    
+      }
        if (this.image) {
         const imageAspect = this.image.width/this.image.height;
         let height = nodeHeight-y;
@@ -204,19 +209,17 @@ function addCanvasWidget(node,name,inputData,app) {
       return [128,128];
     },
     async serializeValue(nodeId,widgetIndex) {
-      let blob = node.imageBlob;
+      let widget = node.widgets[widgetIndex];
+      let blob = widget.blob;
       if (!(blob instanceof Blob))  blob = dummyBlob;
       
-      let result = await uploadBlob(blob,"canvasImage.png")
-      console.log(result);
-
+      let result = await uploadBlob(blob,widget.name+"_Image.png")
       if (result) {
          return result.name;
       }
       return "";
     }
   }
-  node.canvasWidget = widget;  
   node.addCustomWidget(widget);
 
   return widget;
@@ -230,25 +233,30 @@ function initiateCommunication() {
   }
 }
 
-function messageFromEditor(event) {
-  console.log("message from port")
-  if (event.data instanceof Blob) {
-    console.log("received a blob");
-    const nodes =  app.graph.findNodesByType("Canvas_Tab");
-    //send same thing to all of the Canvas_Tab nodes
+function loadBlobIntoWidget(widget, blob) {
+  const objectURL = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+        widget.blob = blob;
+        widget.image = img;
+        app.graph.setDirtyCanvas(true);
+        URL.revokeObjectURL(objectURL);
+  };
+  img.src = objectURL;
+}
 
-    const imageBlob =  event.data;
-    const objectURL = URL.createObjectURL(imageBlob);
-    const img = new Image();
-    img.onload = () => {
-      for (const node of nodes) {
-          node.imageBlob = imageBlob
-          node.canvasWidget.image = img;
-      }
-      app.graph.setDirtyCanvas(true);
-      URL.revokeObjectURL(objectURL);
-    };
-    img.src = objectURL;
+function messageFromEditor(event) {
+  const nodes =  app.graph.findNodesByType("Canvas_Tab");
+  //send same thing to all of the Canvas_Tab nodes
+  if (event.data.image instanceof Blob) {
+    for (const node of nodes) {
+      loadBlobIntoWidget(node.canvasWidget,event.data.image);
+    }
+  }
+  if (event.data.mask instanceof Blob) {
+    for (const node of nodes) {
+      loadBlobIntoWidget(node.maskWidget,event.data.mask);
+    }
   } else {
     console.log('Message received from Image Editor:', event.data);
   }
