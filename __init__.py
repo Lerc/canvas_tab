@@ -29,31 +29,9 @@ def image_to_data_url(image):
 
 class Canvas_Tab:
     """
-    A buffered image
-
-    Class methods
-    -------------
-    INPUT_TYPES (dict): 
-        Tell the main program input parameters of nodes.
-
-    Attributes
-    ----------
-    RETURN_TYPES (`tuple`): 
-        The type of each element in the output tulple.
-    RETURN_NAMES (`tuple`):
-        Optional: The name of each output in the output tulple.
-    FUNCTION (`str`):
-        The name of the entry-point method. For example, if `FUNCTION = "execute"` then it will run Example().execute()
-    OUTPUT_NODE ([`bool`]):
-        If this node is an output node that outputs a result/image from the graph. The SaveImage node is an example.
-        The backend iterates on these output nodes and tries to execute all their parents if their parent graph is properly connected.
-        Assumed to be False if not present.
-    CATEGORY (`str`):
-        The category the node should appear in the UI.
-    execute(s) -> tuple || None:
-        The entry point method. The name of this method must be the same as the value of property `FUNCTION`.
-        For example, if `FUNCTION = "execute"` then this method's name must be `execute`, if `FUNCTION = "foo"` then it must be `foo`.
+    A Image Buffer for handling an editor in another tab.
     """
+
     def __init__(self):
         self.testState = {}
         pass
@@ -75,16 +53,14 @@ class Canvas_Tab:
         }
 
     RETURN_TYPES = ("IMAGE","MASK")
-    #RETURN_NAMES = ("image_output_name",)
 
     FUNCTION = "image_buffer"
 
     #OUTPUT_NODE = False
 
-    CATEGORY = "MuckingAround"
+    CATEGORY = "image"
 
     def image_buffer(self, unique_id, mask, canvas, images=None):
-        print("image_buffer triggered")
 
         collected_images = list()
         for image in images:
@@ -92,26 +68,18 @@ class Canvas_Tab:
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8)) 
             collected_images.append(image_to_data_url(img))
 
-        print(f'unique_id: {unique_id}')
 
 
         image_path = folder_paths.get_annotated_filepath(canvas)
-        print("image path")
-        print(image_path)
-        
         i = Image.open(image_path)
         i = ImageOps.exif_transpose(i)
 
-        
         rgb_image = i.convert("RGB")
         rgb_image = np.array(rgb_image).astype(np.float32) / 255.0
         rgb_image = torch.from_numpy(rgb_image)[None,]
 
 
         mask_path = folder_paths.get_annotated_filepath(mask)
-        print("mask path")
-        print(mask_path)
-        
         i = Image.open(mask_path)
         i = ImageOps.exif_transpose(i)
 
@@ -126,17 +94,12 @@ class Canvas_Tab:
 
         return { "ui": {"collected_images":collected_images},  "result": (rgb_image, mask_data) }
 
-        #return (canvas,)
 
 
-# A dictionary that contains all nodes you want to export with their names
-# NOTE: names should be globally unique
 NODE_CLASS_MAPPINGS = {
-    "Image_Buffer": Canvas_Tab,
     "Canvas_Tab": Canvas_Tab
 }
 
-# A dictionary that contains the friendly/humanly readable titles for the nodes
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Canvas_Tab": "Edit In Another Tab"
 }
