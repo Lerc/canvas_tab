@@ -247,12 +247,12 @@ input[type="color"] {
 
 #layer_control input,
 #layer_control select {
-  width:100%;
+  width:95%;
   text-align:center;
 }
 
 #layer_control label {
-  width:100%;
+  width:95%;
   text-align:center;
   display: inline-block;
   padding-top:5px;
