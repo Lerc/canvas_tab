@@ -50,10 +50,11 @@ class Canvas_Tab:
     def image_buffer(self, unique_id, mask, canvas, images=None):
 
         collected_images = list()
-        for image in images or []:
-            i = 255. * image.cpu().numpy()
-            img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8)) 
-            collected_images.append(image_to_data_url(img))
+        if images is not None:
+            for image in images:
+                i = 255. * image.cpu().numpy()
+                img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8)) 
+                collected_images.append(image_to_data_url(img))
 
 
 

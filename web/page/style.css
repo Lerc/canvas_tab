@@ -329,3 +329,19 @@ input.maskColor {
   top: -3px;
   height:28px;
 }
+
+#import_control {
+  display: inline-block;
+  width: 184px;
+  padding: 0.5em;
+  text-align: center;
+  height: var(--top-panel-height);
+  vertical-align: top;
+  padding-top: 1em;
+  border-right: 1px solid black;
+}
+
+#import_control select {
+  width: 100%;
+  text-align: center;
+}

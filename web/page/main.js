@@ -100,8 +100,18 @@ canvas.addEventListener('contextmenu', (e) => {
 function loadImagefromURL(url) {
   var img = new Image();
   img.onload = function() {    
-    setExportPic(addNewImage(img));
-    
+    console.log("import mode is",$("#import_mode").val())
+    switch ($("#import_mode").val()) {
+        case "layer":
+            addNewLayer(img)
+        break;
+        case "image":
+        setExportPic(addNewImage(img));    
+
+        break;
+        case "ignore":
+        default: 
+    }
   };
   img.src = url;
 }

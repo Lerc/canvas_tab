@@ -349,6 +349,23 @@ function addNewImage(image) {
     return(result)
 }
 
+function addNewLayer(image) {
+  if (!selectedExport) {
+      setExportPic(addNewImage(image)); 
+      return;
+  } 
+  let pic = selectedExport;
+  if (pic.canvas.width === image.width && pic.canvas.height==image.height) {
+    const layer = new Layer("generation",pic.canvas);
+    layer.ctx.drawImage(image,0,0);    
+    console.log("new layer", layer)
+    console.log(layer.canvas.width, layer.canvas.height)
+    pic.layers.push(layer);
+    updateLayerList();
+    pic.updateVisualRepresentation();
+  }
+}
+
 function handleMouseDown(e) {
   //console.log("mousedown on pic",e);
   let pic = e.currentTarget.pic;

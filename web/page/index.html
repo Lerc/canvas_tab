@@ -11,6 +11,16 @@
 <body>
   <div class="fillparent">
     <div class="panel noselect">
+      <div id="import_control">
+        <label for="import_mode">
+          Incoming Images
+        </label>
+        <select id="import_mode">
+          <option value="image">Create new Image</option>
+          <option value="layer">Add layer <small>(if size matches)</small></option>
+          <option value="ignore">Ignore</option>
+        </select>
+      </div>
       <div id="pixels" class="pen button" style="background-image:url(images/pixels.png);"></div>
       <div id="tip1" class="pen button" style="background-image:url(images/tip_1.png);"></div>
       <div id="tip2" class="pen button" style="background-image:url(images/tip_2.png);"></div>
