@@ -51,6 +51,7 @@ function setActivePic(newValue) {
   updateLayerList()
 
 }
+
 var dragging = false;
 
 
@@ -189,6 +190,7 @@ function createDrawArea(canvas = blankCanvas()) {
       canvas.ctx.clearRect(0,0,canvas.width,canvas.height)
       for (const layer of this.layers) {
         if (suppressMask && this.mask==layer) continue;
+        if (!layer.visible) continue;        
         canvas.ctx.globalAlpha = layer.opacity;
         canvas.ctx.globalCompositeOperation=layer.composite;
         if (this.isDrawing && layer===this.activeLayer) {
@@ -225,11 +227,18 @@ function createDrawArea(canvas = blankCanvas()) {
       if (activePic===this) {  
         updateLayerList();  //inefficient to remake all controls on edit,  fix this
       }
-      this.composite();
+      this.updateVisualRepresentation();
 
     },
 
+    updateVisualRepresentation(transmit=false) {
+      this.composite();
+      if (transmit && this===selectedExport) transmitCanvas(canvas);          
+    },
+
     startDraw(x,y) {
+      if (!this.activeLayer.visible) return; //don't draw on hidden layers.
+
       let data = this.activeLayer.ctx.getAllImageData()
       activeOperationCanvas.ctx.putImageData(data,0,0);
       this.isDrawing=true;
@@ -420,7 +429,7 @@ function handleMouseUp(e) {
 }
 function handleMouseMove(e) {
   let pic = e.currentTarget.pic;
-  activePic = pic;
+  if (pic!==activePic) return;
   if (dragging) {
     if (e.buttons!==4) {
       stopDragging();
@@ -697,13 +706,15 @@ function poulateLayerControl() {
   $("input.maskColor").on("change", e=>{
     lastUsedMaskColor = e.currentTarget.value;
     activePic.activeLayer.maskColor=lastUsedMaskColor;
-    activePic.composite();
+    activePic.updateVisualRepresentation();
     updateLayerList();
   });
 
   $("input.opacity").on("input", e=> {
-    activePic.activeLayer.opacity = e.currentTarget.value/100;    
-    activePic.composite();
+    activePic.activeLayer.opacity = e.currentTarget.value/100; 
+    activePic.updateVisualRepresentation(true);
+    //shouldn't need this 
+    updateLayerList();
   });
 
 }
@@ -728,6 +739,7 @@ function updateLayerList() {
     result.querySelector(".visibilitybox").onmousedown = e => {
       e.stopPropagation();
       layer.visible=!layer.visible;
+      pic.updateVisualRepresentation(true);
       updateLayerList();
     }
 
