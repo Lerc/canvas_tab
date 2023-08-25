@@ -8,19 +8,6 @@ from PIL.PngImagePlugin import PngInfo
 import numpy as np
 
 
-cwd_path = os.path.dirname(os.path.realpath(__file__))
-
-local_path = os.path.dirname(__file__) 
-
-relative_target_path = "../../custom_nodes/canvas_tab/web/"
-
-link_path = os.path.normpath(os.path.join(local_path, '..', '..', 'web', 'extensions', 'canvas_tab'))
-
-if not os.path.exists(link_path):
-    print(f"{link_path} not present, creating symlink to  {relative_target_path}")
-    os.symlink(relative_target_path, link_path)
-
-
 def image_to_data_url(image):
     buffered = BytesIO()
     image.save(buffered, format="PNG")
@@ -95,6 +82,7 @@ class Canvas_Tab:
         return { "ui": {"collected_images":collected_images},  "result": (rgb_image, mask_data) }
 
 
+WEB_DIRECTORY = "web"
 
 NODE_CLASS_MAPPINGS = {
     "Canvas_Tab": Canvas_Tab
