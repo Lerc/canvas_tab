@@ -47,8 +47,9 @@ var activePic;
 
 function setActivePic(newValue) {
   activePic=newValue;
-  activePic.bringToFront();
   updateLayerList()
+  if (!activePic) return;
+  activePic.bringToFront();
 
 }
 
@@ -69,6 +70,15 @@ function setExportPic(pic) {
   pic.commit();
   
   transmitMask(pic.mask.canvas);
+}
+
+function closePic(pic) {
+
+  pic.element.parentElement.removeChild(pic.element);
+  if (pic === activePic) {
+    const newActive = document.querySelector("#workspace .pic");
+    setActivePic(newActive.pic);
+  }
 }
 
 var lastUsedMaskColor = "#402040";
@@ -121,13 +131,18 @@ function createDrawArea(canvas = blankCanvas()) {
   const ctx=canvas.getContext("2d");
   const eventOverlay = document.createElement("div");
   const sidebar = document.createElement("div");
+  const closeButton = document.createElement("div");
+
   sidebar.className = "sidebutton";
+  closeButton.className = "closebutton";
+
   element.className="pic";
   eventOverlay.className="eventoverlay fillparent";
 
   element.appendChild(sidebar);
   element.appendChild(canvas);
   element.appendChild(eventOverlay);
+  element.appendChild(closeButton);
   canvas.ctx=ctx;
   
   const activeOperationCanvas = document.createElement("canvas");
@@ -272,6 +287,7 @@ function createDrawArea(canvas = blankCanvas()) {
   }
   eventOverlay.pic = result;
   sidebar.addEventListener("mousedown",_=>  setExportPic(result))
+  closeButton.addEventListener("click",_=>  closePic(result))
 
   result.setTransform();
   setActivePic(result)
@@ -361,6 +377,7 @@ function addNewLayer(image) {
     console.log("new layer", layer)
     console.log(layer.canvas.width, layer.canvas.height)
     pic.layers.push(layer);
+    pic.activeLayer=layer;
     updateLayerList();
     pic.updateVisualRepresentation();
   }
@@ -683,7 +700,7 @@ function poulateLayerControl() {
   const content = $(`
     <div class="layer-attributes">
       <div class="imageLayer">      
-      <select class="composite-mode">
+      <select name="composite-node" class="composite-mode">
         <option value="source-over">Color</option>
         <option value="lighter">Lighter</option>
         <option value="multiply">Multiply</option>
@@ -780,9 +797,11 @@ function updateLayerList() {
 
   const layer_control=document.querySelector("#layer_control") 
   const layer_list =layer_control.querySelector(".layer_list") 
-  const newControls = activePic.layers.map(makeLayerWidget);
-
   while(layer_list.firstChild) layer_list.removeChild(layer_list.firstChild)
+
+  if (!activePic) return;
+  
+  const newControls = activePic.layers.map(makeLayerWidget);
 
   newControls.reverse().forEach(element=>layer_list.appendChild(element))  
 

@@ -146,7 +146,10 @@ window.addEventListener('message', (event) => {
       portToMain.onmessage = (messageEvent) => {
         console.log(messageEvent)
         if (messageEvent.data instanceof Object) {
-          loadImagefromURL(messageEvent.data.images[0]);
+            const images=messageEvent.data.images[0];
+            if (images?.length > 0) {
+                loadImagefromURL(messageEvent.data.images[0]);
+            }
         } else console.log('Message received from main page:', messageEvent.data);
      };
 }

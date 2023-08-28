@@ -64,8 +64,14 @@ app.registerExtension({
     if (title==="Edit In Another Tab") {
       initEditorNode(node) 
     }
+    else if (title==="Send to Editor Tab") {
+      initTransmitNode(node) 
+    }
+
+
   }
 });
+
 
 
 
@@ -81,14 +87,30 @@ function initEditorNode(node)
   
   node.maskWidget.onTopOf = node.canvasWidget;
 
+  /*
   node.onExecuted = (output)=> {
     if (output?.collected_images && editor.channel) {
       editor.channel.port1.postMessage( {images:output.collected_images})
-    }
-      
+    }      
   }
+  */
   return;
 }
+
+function initTransmitNode(node)
+{
+  node.collected_images = [];
+
+  node.onExecuted = (output)=> {
+    if (output?.collected_images && editor.channel) {
+      editor.channel.port1.postMessage( {images:output.collected_images})
+    }      
+  }
+  
+  return;
+}
+
+
 
 function openOrFocusEditor() {
   if (!editor.window || editor.window.closed) {
