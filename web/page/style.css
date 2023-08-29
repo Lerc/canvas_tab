@@ -260,9 +260,16 @@ input[type="color"] {
 }
 
 #layer_control {
+  --control-height :400px;
   bottom:0px;
-  height:400px;
+  height:var(--control-height);
 }
+
+.layer_list {
+  height:calc(var(--control-height) - 100px);
+  overflow-y: auto;
+}
+
 
 .layer-attributes {
   position:relative;
@@ -346,6 +353,39 @@ input[type="color"] {
   height:24px;
 }
 
+.layer_actions {
+  position: absolute;
+  bottom: 2px;
+  border: 1px solid black;
+  height: 26px;
+  left: 0px;
+  right: 0px;
+}
+.layer_actions .remove_layer {
+  position:absolute;
+
+  width:24px;
+  height:24px;
+  right:0px;
+  bottom:0px;
+  box-sizing: border-box;
+
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-6 -12 24 24'%3E%3Cpath d='M 0 7 L -1 -6 L 13 -6 L 12 7 Z M 3 4 v -7 a 1 1 0 0 0 -1 0 v 7 a 1 1 0 0 0 1 0 Z M 6.5 4 v -7 a 1 1 0 0 0 -1 0 v 7 a 1 1 0 0 0 1 0 Z M 10 3.8 v -7 a 1 1 0 0 0 -1 0 v 7 a 1 1 0 0 0 1 0 m 4 -10 h -16 a 1 0.2 0 0 1 16 0 m -9 -1.3 h 2 a 1 1 0 0 0 -2 0' fill='%2300000080'/%3E%3C/svg%3E");
+}
+
+.layer_actions .add_layer {
+  position:absolute;
+
+  width:24px;
+  height:24px;
+  left:0px;
+  bottom:0px;
+  box-sizing: border-box;
+
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -12 24 24'%3E%3Cpath d='M -1 7 H 1 V 1 H 7 V -1 H 1 V -7 H -1 V -1 H -7 V 1 H -1' fill='%2300000080'/%3E%3C/svg%3E")
+}
+
+
 input.maskColor {
   display:inline-block;
   position:absolute;
@@ -368,3 +408,4 @@ input.maskColor {
   width: 100%;
   text-align: center;
 }
+

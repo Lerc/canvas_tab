@@ -282,8 +282,20 @@ function createDrawArea(canvas = blankCanvas()) {
         ctx.restore();
       }
       this.composite();
+    },
+    removeLayer(layer=this.activeLayer) {
+      const i = layers.indexOf(layer);
+      if (i !==-1) {
+        layers.splice(i,1);
+        if (layer === this.activeLayer) {
+          this.activeLayer = layers[Math.min(layers.length-1,i)];
+        }
+      }
+    },
+    addEmptyLayer() {
+      layers.push( new Layer("new layer", canvas));
+
     }
-  
   }
   eventOverlay.pic = result;
   sidebar.addEventListener("mousedown",_=>  setExportPic(result))
@@ -731,7 +743,9 @@ function poulateLayerControl() {
     <div class="layer_list">
   
     </div> 
-    <div class="layer_actions">    
+    <div class="layer_actions">
+      <div class="add_layer"></div>
+      <div class="remove_layer"></div>
     </div>
   `)
 
@@ -751,6 +765,14 @@ function poulateLayerControl() {
     updateLayerList();
   });
 
+  $(".add_layer").on("click",_=>{
+    activePic.addEmptyLayer();
+    updateLayerList();
+  });
+  $(".remove_layer").on("click",_=>{
+    activePic.removeLayer(activePic.activeLayer)
+    updateLayerList();
+  });
 }
 
 function updateLayerList() {
@@ -800,7 +822,7 @@ function updateLayerList() {
   while(layer_list.firstChild) layer_list.removeChild(layer_list.firstChild)
 
   if (!activePic) return;
-  
+
   const newControls = activePic.layers.map(makeLayerWidget);
 
   newControls.reverse().forEach(element=>layer_list.appendChild(element))  
