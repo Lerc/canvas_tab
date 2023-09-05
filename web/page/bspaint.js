@@ -7,6 +7,40 @@ if (location.pathname.includes("/page/")) {
   $(initPaint);
 }
 
+function cells(x=1,y=1) {
+  let width = 1/x;
+  let height = 1/y;
+  return strokes => {
+    let result = [];
+    for (let tx = -1; tx<x; tx++) {
+      for (let ty=-1; ty<y; ty++) {
+        const cell = strokes.map( a=>a.map(
+          function ({x,y}) {
+            return {
+              x:(x + tx*width),
+              y:(y + ty*height),
+            }
+          }));
+        result.push(...cell);
+      }
+    }
+    return result;
+  }
+
+} 
+function mirrorX(strokes) {
+  return [...strokes, ...strokes.map( a=>a.map(({x,y})=>({x:1-x,y})))];
+}
+function mirrorY(strokes) {
+  return [...strokes, ...strokes.map( a=>a.map(({x,y})=>({x,y:1-y})))];
+}
+
+function composeFunction(fnA,fnB) {
+  return (...args)=>(fnB(fnA(...args)))
+}
+
+const mirrorXY = composeFunction(mirrorX,mirrorY);
+
 CanvasRenderingContext2D.prototype.getAllImageData = function()  {
   return this.getImageData(0,0,this.canvas.width,this.canvas.height)
 }
@@ -120,9 +154,26 @@ function blankCanvas(width=512, height=width, filled=true) {
   canvas.width=width;
   canvas.height=height;
   const ctx=canvas.getContext("2d");
-  ctx.fillStyle="white";
-  ctx.fillRect(0,0,width,height);
+  if (filled) {
+    ctx.fillStyle="white";
+    ctx.fillRect(0,0,width,height);
+  }
+  canvas.ctx=ctx;
   return canvas;
+}
+
+function circleImage(diameter) {
+  console.log({diameter})
+  const imageSize=(diameter+4)|0;
+  let result = blankCanvas(imageSize,imageSize,false);
+  result.ctx.arc(imageSize/2,imageSize/2,diameter/2,0,Math.PI*2);
+  result.ctx.lineWidth=3;
+  result.ctx.strokeStyle="#000";
+  result.ctx.stroke();
+  result.ctx.lineWidth=1;
+  result.ctx.strokeStyle="#fff";
+  result.ctx.stroke();
+  return result;
 }
 
 function createDrawArea(canvas = blankCanvas()) {
@@ -177,6 +228,7 @@ function createDrawArea(canvas = blankCanvas()) {
     isDrawing:false,
     activeLayer:layers[0],
     strokeCoordinates :[], 
+    strokeModifier: a=>a,
     setTransform( ) {
       const {element,scale,offsetX,offsetY} = this;
       element.style.setProperty("--scalefactor",scale)
@@ -283,7 +335,13 @@ function createDrawArea(canvas = blankCanvas()) {
           activeOperationCanvas.ctx.clearRect(0,0,activeOperationCanvas.width,activeOperationCanvas.height);
           activeOperationCanvas.ctx.drawImage(this.activeLayer.canvas,0,0);
     
-          tip.drawOperation(activeOperationCanvas.ctx,tip,this.strokeCoordinates)
+          const unitRange=this.strokeCoordinates.map(({x,y})=>({x:x/canvas.width,y:y/canvas.height}));
+
+          const strokes = this.strokeModifier([unitRange])          
+          for (const unitStroke of strokes) {
+            const stroke=unitStroke.map(({x,y})=>({x:x*canvas.width,y:y*canvas.height}));
+            tip.drawOperation(activeOperationCanvas.ctx,tip,stroke)
+          }
           if (this.activeLayer.mask) {
             const ctx=activeOperationCanvas.ctx;
             ctx.save();
@@ -295,8 +353,7 @@ function createDrawArea(canvas = blankCanvas()) {
           this.composite();
           updatingStroke=false;
         },1)
-      }
-      
+      }      
     },
     removeLayer(layer=this.activeLayer) {
       const i = layers.indexOf(layer);
@@ -335,7 +392,9 @@ function initPaint(){
   $(".background")[0].addEventListener("wheel",handleMouseWheel);
 
   $(".paletteentry").on("mousedown", function(e) {
-    pen=feltTip;
+    if (![feltTip,pixelTip].includes(pen)) {
+      pen=feltTip;
+    }
     let eraser=false;
     let c= $(e.currentTarget).data("colour");
     if (c==="#0000") {
@@ -373,6 +432,12 @@ function initPaint(){
 
   brushSizeControl.addEventListener("changed", e=> {
     tip.size=brushSizeControl.diameter;
+
+    for (let p of $(".pic")) {
+      updateBrushCursor(p);
+    }
+
+    
   });
 
 
@@ -574,15 +639,16 @@ function setScale(newfactor, around) {
     pic.scale=newScale;
     pic.scalefactor=newfactor;
     pic.setTransform();
+    updateBrushCursor(pic.element);
 }
   
 function pixelTip(ctx,penInfo,strokePath) {
   console.log(penInfo)
   ctx.fillStyle=penInfo.colour;
   for (let {x,y} of strokePath) {
-      x-=0.25;
-      y-=0.25;
-      ctx.fillRect(x,y,1,1);
+    x=Math.floor(x-0.25);
+    y=Math.floor(y-0.25);
+    ctx.fillRect(x,y,1,1);
   };
 }
 
@@ -620,8 +686,8 @@ function pixelClear(ctx,penInfo,strokePath) {
   let y=Math.floor(penInfo.y-0.25);
   ctx.clearRect(x,y,1,1);
   for (let {x,y} of strokePath) {
-    x-=0.25;
-    y-=0.25;
+    x=Math.floor(x-0.25);
+    y=Math.floor(y-0.25);
     ctx.clearRect(x,y,1,1);
   };
 }
@@ -861,6 +927,16 @@ function updateLayerList() {
 }
 
 
+
+function updateBrushCursor(picElement) {
+  const p=picElement;
+  let scale = parseFloat(p.style.getPropertyValue("--scalefactor")); 
+  let newCursor = circleImage(tip.size * scale);
+  let offset = (newCursor.width/2)|0;
+  let value = `url(${newCursor.toDataURL()}) ${offset} ${offset}, auto `;
+  if ((newCursor.width < 2) || (newCursor.width>120)) value="crosshair";
+  p.style.setProperty("cursor",value);
+}
 
 
 function cloneEvent(event, modifications = {}) {
