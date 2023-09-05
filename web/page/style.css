@@ -77,6 +77,12 @@ canvas {
     margin : 3px;
 }
 
+.paletteentry.erase {
+  width: 72px;
+  text-align: center;
+  line-height: 32px;
+}
+
 #workspace{
   position:absolute;
   

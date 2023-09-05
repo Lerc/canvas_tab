@@ -132,7 +132,7 @@ function createDrawArea(canvas = blankCanvas()) {
   const eventOverlay = document.createElement("div");
   const sidebar = document.createElement("div");
   const closeButton = document.createElement("div");
-
+  
   sidebar.className = "sidebutton";
   closeButton.className = "closebutton";
 
@@ -176,7 +176,7 @@ function createDrawArea(canvas = blankCanvas()) {
     offsetY:0,
     isDrawing:false,
     activeLayer:layers[0],
-
+    strokeCoordinates :[], 
     setTransform( ) {
       const {element,scale,offsetX,offsetY} = this;
       element.style.setProperty("--scalefactor",scale)
@@ -253,10 +253,10 @@ function createDrawArea(canvas = blankCanvas()) {
 
     startDraw(x,y) {
       if (!this.activeLayer.visible) return; //don't draw on hidden layers.
-
-      let data = this.activeLayer.ctx.getAllImageData()
-      activeOperationCanvas.ctx.putImageData(data,0,0);
+      //let data = this.activeLayer.ctx.getAllImageData()
+      //activeOperationCanvas.ctx.putImageData(data,0,0);
       this.isDrawing=true;
+      this.strokeCoordinates=[];
       tip.x=x;
       tip.y=y;
       this.draw(x,y);
@@ -268,11 +268,29 @@ function createDrawArea(canvas = blankCanvas()) {
     },
 
     draw(x,y) {
-      tip.lastX=tip.x;
-      tip.lastY=tip.y;
-      tip.x=x;
-      tip.y=y;
-      if (tip.drawOperation) tip.drawOperation(activeOperationCanvas.ctx,tip);
+      this.strokeCoordinates.push({x,y});      
+
+      //tip.lastX=tip.x;
+      //tip.lastY=tip.y;
+      //tip.x=x;
+      //tip.y=y;
+      //if (tip.drawOperation) tip.drawOperation(activeOperationCanvas.ctx,tip);
+      activeOperationCanvas.ctx.clearRect(0,0,activeOperationCanvas.width,activeOperationCanvas.height);
+      activeOperationCanvas.ctx.drawImage(this.activeLayer.canvas,0,0);
+
+      //activeOperationCanvas.ctx.putImageData(data,0,0);
+      tip.drawOperation(activeOperationCanvas.ctx,tip,this.strokeCoordinates)
+      /*
+      let last=this.strokeCoordinates[0];
+      for (const p of this.strokeCoordinates) {
+        tip.lastX=last.x;
+        tip.lastY=last.y;
+        tip.x=p.x;
+        tip.y=p.y;
+        last=p;
+        tip.drawOperation(activeOperationCanvas.ctx,tip);
+      }
+      */
       if (this.activeLayer.mask) {
         const ctx=activeOperationCanvas.ctx;
         ctx.save();
@@ -293,8 +311,9 @@ function createDrawArea(canvas = blankCanvas()) {
       }
     },
     addEmptyLayer() {
-      layers.push( new Layer("new layer", canvas));
-
+      let result = new Layer("new layer", canvas)
+      layers.push(result);
+      return result;
     }
   }
   eventOverlay.pic = result;
@@ -314,14 +333,24 @@ function initPaint(){
     const e=`<div class="paletteentry" style="background-color:${i}"> </div>`;
     palette.append($(e).data("colour",i));
   }
+  palette.append($(`<div class="paletteentry erase">Erase</div>`).data("colour","#0000"))
   poulateLayerControl();
   $(".background")[0].addEventListener("wheel",handleMouseWheel);
 
   $(".paletteentry").on("mousedown", function(e) {
+    pen=feltTip;
+    let eraser=false;
     let c= $(e.currentTarget).data("colour");
-    console.log("color ",c,e.which);
-    if (e.which == 1) $("#foreground").val(c);
-    if (e.which == 3) $("#background").val(c);
+    if (c==="#0000") {
+      c="#ffffff";
+      eraser = true;
+    } 
+    if (e.which == 1) {
+      $("#foreground").val(c).data("eraser",eraser);
+    }
+    if (e.which == 3) {
+      $("#background").val(c).data("eraser",eraser);
+    }
 
   }).on("contextmenu",
   function(){return false;}
@@ -404,8 +433,8 @@ function handleMouseDown(e) {
 
   
   switch (e.button) {
-    case 0:
-      tip.drawOperation = pen;
+    case 0:      
+      tip.drawOperation = $("#foreground").data("eraser")?eraserTip:pen;      
       tip.colour = maskLayer?"#000":$("#foreground").val();
       pic.startDraw(e.offsetX,e.offsetY);
       createCaptureOverlay(e.currentTarget)
@@ -423,7 +452,7 @@ function handleMouseDown(e) {
       break;
     case 2:
       tip.colour = $("#background").val();
-      tip.drawOperation = maskLayer?eraserTip:pen;
+      tip.drawOperation = (maskLayer || $("#background").data("eraser"))?eraserTip:pen;
       pic.startDraw(e.offsetX,e.offsetY);
       createCaptureOverlay(e.currentTarget)
 
@@ -550,58 +579,55 @@ function setScale(newfactor, around) {
     pic.setTransform();
 }
   
-function pixelTip(ctx,penInfo) {
+function pixelTip(ctx,penInfo,strokePath) {
   console.log(penInfo)
-  let x=Math.floor(penInfo.x-0.25);
-  let y=Math.floor(penInfo.y-0.25);
   ctx.fillStyle=penInfo.colour;
-  ctx.fillRect(x,y,1,1);
+  for (let {x,y} of strokePath) {
+      x-=0.25;
+      y-=0.25;
+      ctx.fillRect(x,y,1,1);
+  };
 }
 
-function feltTip(ctx,penInfo) {
+function feltTip(ctx,penInfo,strokePath) {
   ctx.lineWidth=penInfo.size;
   ctx.strokeStyle=penInfo.colour;
   ctx.lineCap="round";
-  let lastX=Math.round(penInfo.lastX);
-  let lastY=Math.round(penInfo.lastY);
-  let x=Math.round(penInfo.x);
-  let y=Math.round(penInfo.y);
-  
+  ctx.lineJoin="round";
   ctx.beginPath();
-  ctx.moveTo(lastX,lastY);
-  ctx.lineTo(x,y);
+  for (let {x,y} of strokePath) {
+    ctx.lineTo(x,y);
+  }
   ctx.stroke();
 }
   
-function eraserTip(ctx,penInfo) {  
+function eraserTip(ctx,penInfo,strokePath) {  
   ctx.save();
   ctx.lineWidth=penInfo.size;
   ctx.strokeStyle="white";
   ctx.lineCap="round";
+  ctx.lineJoin="round";
   ctx.globalCompositeOperation="destination-out";
-  let lastX=Math.round(penInfo.lastX);
-  let lastY=Math.round(penInfo.lastY);
-  let x=Math.round(penInfo.x);
-  let y=Math.round(penInfo.y);
-  
+
   ctx.beginPath();
-  ctx.moveTo(lastX,lastY);
-  ctx.lineTo(x,y);
+  for (let {x,y} of strokePath) {
+    ctx.lineTo(x,y);
+  }
   ctx.stroke();
+
   ctx.restore();
 }
 
-function pixelClear(ctx,penInfo) {
-  console.log(penInfo)
+function pixelClear(ctx,penInfo,strokePath) {
   let x=Math.floor(penInfo.x-0.25);
   let y=Math.floor(penInfo.y-0.25);
   ctx.clearRect(x,y,1,1);
+  for (let {x,y} of strokePath) {
+    x-=0.25;
+    y-=0.25;
+    ctx.clearRect(x,y,1,1);
+  };
 }
-
-
-
-
-
 
 
 var mouseDownX=0;
@@ -766,9 +792,10 @@ function poulateLayerControl() {
   });
 
   $(".add_layer").on("click",_=>{
-    activePic.addEmptyLayer();
+    activePic.activeLayer = activePic.addEmptyLayer();
     updateLayerList();
   });
+  
   $(".remove_layer").on("click",_=>{
     activePic.removeLayer(activePic.activeLayer)
     updateLayerList();
