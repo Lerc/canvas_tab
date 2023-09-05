@@ -132,7 +132,7 @@ function createDrawArea(canvas = blankCanvas()) {
   const eventOverlay = document.createElement("div");
   const sidebar = document.createElement("div");
   const closeButton = document.createElement("div");
-  
+  var updatingStroke=false;
   sidebar.className = "sidebutton";
   closeButton.className = "closebutton";
 
@@ -256,50 +256,47 @@ function createDrawArea(canvas = blankCanvas()) {
       //let data = this.activeLayer.ctx.getAllImageData()
       //activeOperationCanvas.ctx.putImageData(data,0,0);
       this.isDrawing=true;
-      this.strokeCoordinates=[];
+      this.strokeCoordinates=[{x:x+0.001,y}];
       tip.x=x;
       tip.y=y;
       this.draw(x,y);
     },
 
     stopDraw(x,y) {
-      this.isDrawing=false;
-      this.commit();
+      const self=this;
+      if (updatingStroke) {
+        setTimeout(_=>self.stopDraw(x,y),1)
+      } else {
+        this.isDrawing=false;
+        this.commit();
+      }
     },
 
     draw(x,y) {
       this.strokeCoordinates.push({x,y});      
 
-      //tip.lastX=tip.x;
-      //tip.lastY=tip.y;
-      //tip.x=x;
-      //tip.y=y;
-      //if (tip.drawOperation) tip.drawOperation(activeOperationCanvas.ctx,tip);
-      activeOperationCanvas.ctx.clearRect(0,0,activeOperationCanvas.width,activeOperationCanvas.height);
-      activeOperationCanvas.ctx.drawImage(this.activeLayer.canvas,0,0);
-
-      //activeOperationCanvas.ctx.putImageData(data,0,0);
-      tip.drawOperation(activeOperationCanvas.ctx,tip,this.strokeCoordinates)
-      /*
-      let last=this.strokeCoordinates[0];
-      for (const p of this.strokeCoordinates) {
-        tip.lastX=last.x;
-        tip.lastY=last.y;
-        tip.x=p.x;
-        tip.y=p.y;
-        last=p;
-        tip.drawOperation(activeOperationCanvas.ctx,tip);
+      //This is done in a timeout to allow multiple draw movements
+      //to accumulate rather than slowing things down
+      if (!updatingStroke) {
+        updatingStroke=true;
+        setTimeout(_=>{
+          activeOperationCanvas.ctx.clearRect(0,0,activeOperationCanvas.width,activeOperationCanvas.height);
+          activeOperationCanvas.ctx.drawImage(this.activeLayer.canvas,0,0);
+    
+          tip.drawOperation(activeOperationCanvas.ctx,tip,this.strokeCoordinates)
+          if (this.activeLayer.mask) {
+            const ctx=activeOperationCanvas.ctx;
+            ctx.save();
+            ctx.globalCompositeOperation="source-atop";
+            ctx.fillStyle = this.activeLayer.maskColor;
+            ctx.fillRect(0,0,activeOperationCanvas.width,activeOperationCanvas.height);
+            ctx.restore();
+          }
+          this.composite();
+          updatingStroke=false;
+        },1)
       }
-      */
-      if (this.activeLayer.mask) {
-        const ctx=activeOperationCanvas.ctx;
-        ctx.save();
-        ctx.globalCompositeOperation="source-atop";
-        ctx.fillStyle = this.activeLayer.maskColor;
-        ctx.fillRect(0,0,activeOperationCanvas.width,activeOperationCanvas.height);
-        ctx.restore();
-      }
-      this.composite();
+      
     },
     removeLayer(layer=this.activeLayer) {
       const i = layers.indexOf(layer);
@@ -795,7 +792,7 @@ function poulateLayerControl() {
     activePic.activeLayer = activePic.addEmptyLayer();
     updateLayerList();
   });
-  
+
   $(".remove_layer").on("click",_=>{
     activePic.removeLayer(activePic.activeLayer)
     updateLayerList();
