@@ -43,7 +43,7 @@ canvas {
   height:32px;
   margin:2px;
   background-color : #ddd;
-
+  box-sizing: border-box;
   box-shadow: -1px -1px 1px 1px black inset, 1px 1px 1px 1px white inset;
 }
 .button:hover {
@@ -61,6 +61,74 @@ canvas {
 .pen.button {
   margin-bottom: 9px;
 }
+
+.subpanel {
+  display: inline-block;
+  border-left: 1px solid black;
+  padding-left: 6px;
+  height: var(--top-panel-height);
+  vertical-align: top;
+  box-sizing:border-box;
+}
+
+.subpanel input {
+  display:block;
+}
+
+.subpanel.simple_mirrors {
+  width:70px;
+}
+
+.subpanel.grid_mirrors>span {
+  height: var(--top-panel-height);
+  vertical-align: top;
+  padding-top: 10px;
+}
+
+
+.mirror.button {
+  width:24px;
+  height:24px;
+}
+
+.mirror.button#mirror_y {
+  background-image: linear-gradient(to bottom, #0000 45%, #000f 50%, #0000 55%);
+}
+
+.mirror.button#mirror_x {
+  background-image: linear-gradient(to right, #0000 45%, #000f 50%, #0000 55%);
+}
+
+.mirror.button#mirror_tlbr {
+  background-image: linear-gradient(to right top, #0000 45%, #000f 50%, #0000 55%);
+}
+
+.mirror.button#mirror_trbl {
+  background-image: linear-gradient(to right bottom, #0000 45%, #000f 50%, #0000 55%);
+}
+
+.mirror.button#mirror_grid {
+  width: 48px;
+  height: 48px;
+  margin-top: 6px;
+}
+
+.subpanel.rotational_mirrors {
+  width: 55px;
+  text-align:center;
+}
+
+.mirror.button#mirror_rotational {
+  width: 36px;
+  height: 36px;
+  margin-bottom:0;
+}
+
+.subpanel.rotational_mirrors input {
+  width: 42px;
+}
+
+
 
 #palette {
   position:absolute;

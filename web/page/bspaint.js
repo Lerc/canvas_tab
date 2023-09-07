@@ -26,14 +26,47 @@ function cells(x=1,y=1) {
     }
     return result;
   }
-
 } 
+
 function mirrorX(strokes) {
   return [...strokes, ...strokes.map( a=>a.map(({x,y})=>({x:1-x,y})))];
 }
 function mirrorY(strokes) {
   return [...strokes, ...strokes.map( a=>a.map(({x,y})=>({x,y:1-y})))];
 }
+
+function mirrorDiagonalXY(strokes) {
+  return [...strokes, ...strokes.map( a => a.map(({x, y}) => ({x: y, y: x})))];
+}
+
+function mirrorDiagonalY1MinusX(strokes) {
+  return [...strokes, ...strokes.map( a => a.map(({x, y}) => ({x: 1 - y, y: 1 - x})))];
+}
+
+function rotationalSymmetry(ways) {
+  const angleIncrement = (Math.PI * 2) / ways;
+  const originX = 0.5, originY = 0.5;
+  
+  return function(strokes) {
+    let newStrokes = [...strokes];
+    
+    for(let i = 1; i < ways; i++) {
+      const angle = i * angleIncrement;
+      const cosAngle = Math.cos(angle);
+      const sinAngle = Math.sin(angle);
+      
+      const rotatedStrokes = strokes.map( a => a.map(({x, y}) => ({
+        x: cosAngle * (x - originX) - sinAngle * (y - originY) + originX,
+        y: sinAngle * (x - originX) + cosAngle * (y - originY) + originY
+      })));
+      
+      newStrokes = [...newStrokes, ...rotatedStrokes];
+    }
+    
+    return newStrokes;
+  };
+}
+
 
 function composeFunction(fnA,fnB) {
   return (...args)=>(fnB(fnA(...args)))
@@ -163,7 +196,7 @@ function blankCanvas(width=512, height=width, filled=true) {
 }
 
 function circleImage(diameter) {
-  console.log({diameter})
+  
   const imageSize=(diameter+4)|0;
   let result = blankCanvas(imageSize,imageSize,false);
   result.ctx.arc(imageSize/2,imageSize/2,diameter/2,0,Math.PI*2);
@@ -174,6 +207,78 @@ function circleImage(diameter) {
   result.ctx.strokeStyle="#fff";
   result.ctx.stroke();
   return result;
+}
+
+function gridImage(rows,columns,size=24) {
+  const result = blankCanvas(size,size,false);
+  const ctx = result.ctx;
+  const rowHeight = size/rows;
+  const columnWidth = size/columns;
+  for (let tx=0; tx<columns; tx++) {
+    for (let ty=0; ty<rows; ty++) {
+      ctx.strokeRect(tx*columnWidth,ty*rowHeight, columnWidth, rowHeight);
+    }
+  }
+  return result;
+}
+
+function spiralImage(fins,size=24) {
+  const result = blankCanvas(size,size,false);
+  const ctx = result.ctx;
+  let angularSpacing = Math.PI*2/fins;
+  let cx=size/2;
+  let cy=size/2;
+  for (let i = 0; i<fins;i++)   {
+    const a = i*angularSpacing+.5;
+    
+    const x= Math.sin(a)*size;
+    const y= Math.cos(a)*size;
+    const x2= Math.sin(a-angularSpacing*.5)*size*.5;
+    const y2= Math.cos(a-angularSpacing*.5)*size*.5;
+    ctx.beginPath()
+    ctx.moveTo(cx+x,cy+y);
+    ctx.quadraticCurveTo(cx+x2,cy+y2,cx,cy)
+    ctx.lineTo(cx,cy)
+    ctx.stroke();
+  } 
+  return result;
+}
+
+function updateMirrorGridButtonImage() {
+  const columns = $(".grid_mirrors #repeat_x").val();
+  const rows = $(".grid_mirrors #repeat_y").val();
+  const image=gridImage(rows,columns,48);
+  $("#mirror_grid").css('background-image',`url(${image.toDataURL()})`);
+}
+
+function updateMirrorRotationButtonImage() {
+  const fins = $(".rotational_mirrors input").val();
+
+  const image=spiralImage(fins,36);
+  $("#mirror_rotational").css('background-image',`url(${image.toDataURL()})`);
+}
+
+var mirrorFunction = a=>a;
+
+function updateMirrors() {
+  let result = a=>a;
+  if($("#mirror_grid.mirror.button").hasClass("down")) {
+    const columns = $(".grid_mirrors #repeat_x").val();
+    const rows = $(".grid_mirrors #repeat_y").val();  
+    const gridFunction = cells(columns,rows);
+    result = composeFunction(result,gridFunction);
+  }
+  if($("#mirror_x.mirror.button").hasClass("down"))  result = composeFunction(result,mirrorX);
+  if($("#mirror_y.mirror.button").hasClass("down")) result = composeFunction(result,mirrorY);
+  if($("#mirror_tlbr.mirror.button").hasClass("down")) result = composeFunction(result,mirrorDiagonalXY);
+  if($("#mirror_trbl.mirror.button").hasClass("down")) result = composeFunction(result,mirrorDiagonalY1MinusX);
+  if($("#mirror_rotational.mirror.button").hasClass("down")) {
+    const ways = $(".rotational_mirrors input").val();
+    const rotationFunction = rotationalSymmetry(ways);
+    result = composeFunction(result,rotationFunction);
+  } 
+
+  mirrorFunction=result;
 }
 
 function createDrawArea(canvas = blankCanvas()) {
@@ -305,6 +410,7 @@ function createDrawArea(canvas = blankCanvas()) {
 
     startDraw(x,y) {
       if (!this.activeLayer.visible) return; //don't draw on hidden layers.
+      this.strokeModifier=mirrorFunction;
       //let data = this.activeLayer.ctx.getAllImageData()
       //activeOperationCanvas.ctx.putImageData(data,0,0);
       this.isDrawing=true;
@@ -437,11 +543,38 @@ function initPaint(){
       updateBrushCursor(p);
     }
 
-    
   });
 
 
-  $(".panel").append(brushSizeControl)
+  $(".panel").append(brushSizeControl).append(`
+  <div class="subpanel simple_mirrors">
+    <div id="mirror_x" class="mirror button"></div>
+    <div id="mirror_y" class="mirror button"></div>
+    <div id="mirror_tlbr" class="mirror button"></div>
+    <div id="mirror_trbl" class="mirror button"></div>
+  </div>  
+    <div class="subpanel grid_mirrors">
+      <span style="display:inline-block;">
+        <input id="repeat_x" type="number" min="2" max="10" value="3" step="1" required />
+        <input id="repeat_y" type="number" min="2" max="10" value="3" step="1" required />
+      </span>
+      <div id="mirror_grid" class="mirror button"></div>
+    </div>
+    <div class="subpanel rotational_mirrors">
+      <div id="mirror_rotational" class="mirror button"></div>
+      <input id="repeat_x" type="number" min="2" max="180" value="2" step="1" required />
+    </div>
+  `);
+
+  $('.grid_mirrors input').on("change",_=>{updateMirrorGridButtonImage(); updateMirrors()})
+  $('.rotational_mirrors input').on("change",_=>{updateMirrorRotationButtonImage(); updateMirrors()})
+  
+  $('.mirror.button').on("mousedown", e=>{
+    e.currentTarget.classList.toggle('down');
+    updateMirrors();
+  })
+  updateMirrorGridButtonImage();
+  updateMirrorRotationButtonImage();
 
   window.test1=createDrawArea();
   window.test2=createDrawArea();
