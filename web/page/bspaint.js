@@ -84,7 +84,7 @@ class Layer {
   ctx = this.canvas.getContext("2d",{willReadFrequently:true});
   mask = false;
   visible = true;
-  composite = "source-over";
+  compositeOperation = "source-over";
   opacity = 1;
   _maskColor = lastUsedMaskColor;
   constructor (title, {width,height}, mask = false)  {
@@ -93,7 +93,7 @@ class Layer {
     this.mask = mask;
     this.title= title;
     if (mask) {
-      this.composite="source-over";
+      this.compositeOperation="source-over";
     }
   }
   get maskColor() {
@@ -232,7 +232,7 @@ function createDrawArea(canvas = blankCanvas()) {
         if (suppressMask && this.mask==layer) continue;
         if (!layer.visible) continue;        
         canvas.ctx.globalAlpha = layer.opacity;
-        canvas.ctx.globalCompositeOperation=layer.composite;
+        canvas.ctx.globalCompositeOperation=layer.compositeOperation;
         if (this.isDrawing && layer===this.activeLayer) {
           canvas.ctx.drawImage(activeOperationCanvas,0,0);          
         } else {
@@ -794,7 +794,7 @@ function poulateLayerControl() {
     <div class="layer-attributes">
       <div class="imageLayer">      
       <select name="composite-node" class="composite-mode">
-        <option value="source-over">Color</option>
+        <option value="source-over">Standard Color</option>
         <option value="lighter">Lighter</option>
         <option value="multiply">Multiply</option>
         <option value="screen">Screen</option>
@@ -832,6 +832,11 @@ function poulateLayerControl() {
 
   $(layer_control).append(content);
 
+  $('select.composite-mode').on("change", e=>{
+    const mode = e.currentTarget.value;
+    activePic.activeLayer.compositeOperation=mode; 
+    activePic.updateVisualRepresentation();
+  }) 
   $("input.maskColor").on("change", e=>{
     lastUsedMaskColor = e.currentTarget.value;
     activePic.activeLayer.maskColor=lastUsedMaskColor;
@@ -983,6 +988,7 @@ function updateLayerList() {
   lastUsedMaskColor=activePic.activeLayer.maskColor;
   $("input.maskColor").val(lastUsedMaskColor)
   $("input.opacity").val((activePic.activeLayer.opacity*100)|0)
+  $('select.composite-mode').val(activePic.activeLayer.compositeOperation);
 
 
 }
