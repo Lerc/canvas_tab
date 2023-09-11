@@ -405,6 +405,15 @@ input[type="color"] {
   background: radial-gradient(ellipse at center, #ffffff 0%,#e0e6f9 11%,#5b9aff 43%,#3d8cf4 70%,#007fef 100%); 
 }
 
+
+#layer_control .layer_list.insert_top {
+  border-top:3px solid red;
+}
+
+#layer_control .layer_widget.insert_after {
+  border-bottom:3px solid red;
+}
+
 .layer_widget.active {
   background: cornsilk;
 }
@@ -482,4 +491,3 @@ input.maskColor {
   width: 100%;
   text-align: center;
 }
-

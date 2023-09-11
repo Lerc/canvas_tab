@@ -7,91 +7,20 @@ if (location.pathname.includes("/page/")) {
   $(initPaint);
 }
 
-function cells(x=1,y=1) {
-  let width = 1/x;
-  let height = 1/y;
-  return strokes => {
-    let result = [];
-    for (let tx = -1; tx<x; tx++) {
-      for (let ty=-1; ty<y; ty++) {
-        const cell = strokes.map( a=>a.map(
-          function ({x,y}) {
-            return {
-              x:(x + tx*width),
-              y:(y + ty*height),
-            }
-          }));
-        result.push(...cell);
-      }
-    }
-    return result;
-  }
-} 
-
-function mirrorX(strokes) {
-  return [...strokes, ...strokes.map( a=>a.map(({x,y})=>({x:1-x,y})))];
-}
-function mirrorY(strokes) {
-  return [...strokes, ...strokes.map( a=>a.map(({x,y})=>({x,y:1-y})))];
-}
-
-function mirrorDiagonalXY(strokes) {
-  return [...strokes, ...strokes.map( a => a.map(({x, y}) => ({x: y, y: x})))];
-}
-
-function mirrorDiagonalY1MinusX(strokes) {
-  return [...strokes, ...strokes.map( a => a.map(({x, y}) => ({x: 1 - y, y: 1 - x})))];
-}
-
-function rotationalSymmetry(ways) {
-  const angleIncrement = (Math.PI * 2) / ways;
-  const originX = 0.5, originY = 0.5;
-  
-  return function(strokes) {
-    let newStrokes = [...strokes];
-    
-    for(let i = 1; i < ways; i++) {
-      const angle = i * angleIncrement;
-      const cosAngle = Math.cos(angle);
-      const sinAngle = Math.sin(angle);
-      
-      const rotatedStrokes = strokes.map( a => a.map(({x, y}) => ({
-        x: cosAngle * (x - originX) - sinAngle * (y - originY) + originX,
-        y: sinAngle * (x - originX) + cosAngle * (y - originY) + originY
-      })));
-      
-      newStrokes = [...newStrokes, ...rotatedStrokes];
-    }
-    
-    return newStrokes;
-  };
-}
-
-
-function composeFunction(fnA,fnB) {
-  return (...args)=>(fnB(fnA(...args)))
-}
-
-const mirrorXY = composeFunction(mirrorX,mirrorY);
-
-CanvasRenderingContext2D.prototype.getAllImageData = function()  {
-  return this.getImageData(0,0,this.canvas.width,this.canvas.height)
-}
-
-CanvasRenderingContext2D.prototype.setAllImageData = function(imageData)  {
-  return this.putImageData(imageData,0,0)
-}
-
 var initialPalette = [
   "#000000","#ffffff",
+  "#202020","#404040",
+  "#606060","#a0a0a0",
+  "#808080","#a0a0a0",
+  "#c0c060","#e0e0e0",
+  
   "#ff0000","#ff8000",
   "#ffff00","#008000",
   "#00ff00","#00ff80",
   "#0080ff","#50C0ff",
   "#0000ff","#8080ff",
   "#a00060","#ff00ff",
-  "#ffa0a0","#a06040",
-  "#606060","#a0a0a0"];
+  "#ffa0a0","#a06040"];
 
 var tip = {
     lastX : 0,
@@ -121,10 +50,10 @@ function setActivePic(newValue) {
 }
 
 var dragging = false;
-
-
 var dragStartX;
 var dragStartY;
+
+var draggingElement = null;
 
 
 function setExportPic(pic) {
@@ -182,68 +111,6 @@ class Layer {
   }
 }
 
-function blankCanvas(width=512, height=width, filled=true) {
-  const canvas = document.createElement("canvas");
-  canvas.width=width;
-  canvas.height=height;
-  const ctx=canvas.getContext("2d");
-  if (filled) {
-    ctx.fillStyle="white";
-    ctx.fillRect(0,0,width,height);
-  }
-  canvas.ctx=ctx;
-  return canvas;
-}
-
-function circleImage(diameter) {
-  
-  const imageSize=(diameter+4)|0;
-  let result = blankCanvas(imageSize,imageSize,false);
-  result.ctx.arc(imageSize/2,imageSize/2,diameter/2,0,Math.PI*2);
-  result.ctx.lineWidth=3;
-  result.ctx.strokeStyle="#000";
-  result.ctx.stroke();
-  result.ctx.lineWidth=1;
-  result.ctx.strokeStyle="#fff";
-  result.ctx.stroke();
-  return result;
-}
-
-function gridImage(rows,columns,size=24) {
-  const result = blankCanvas(size,size,false);
-  const ctx = result.ctx;
-  const rowHeight = size/rows;
-  const columnWidth = size/columns;
-  for (let tx=0; tx<columns; tx++) {
-    for (let ty=0; ty<rows; ty++) {
-      ctx.strokeRect(tx*columnWidth,ty*rowHeight, columnWidth, rowHeight);
-    }
-  }
-  return result;
-}
-
-function spiralImage(fins,size=24) {
-  const result = blankCanvas(size,size,false);
-  const ctx = result.ctx;
-  let angularSpacing = Math.PI*2/fins;
-  let cx=size/2;
-  let cy=size/2;
-  for (let i = 0; i<fins;i++)   {
-    const a = i*angularSpacing+.5;
-    
-    const x= Math.sin(a)*size;
-    const y= Math.cos(a)*size;
-    const x2= Math.sin(a-angularSpacing*.5)*size*.5;
-    const y2= Math.cos(a-angularSpacing*.5)*size*.5;
-    ctx.beginPath()
-    ctx.moveTo(cx+x,cy+y);
-    ctx.quadraticCurveTo(cx+x2,cy+y2,cx,cy)
-    ctx.lineTo(cx,cy)
-    ctx.stroke();
-  } 
-  return result;
-}
-
 function updateMirrorGridButtonImage() {
   const columns = $(".grid_mirrors #repeat_x").val();
   const rows = $(".grid_mirrors #repeat_y").val();
@@ -262,6 +129,12 @@ var mirrorFunction = a=>a;
 
 function updateMirrors() {
   let result = a=>a;
+  if($("#mirror_rotational.mirror.button").hasClass("down")) {
+    const ways = $(".rotational_mirrors input").val();
+    const rotationFunction = rotationalSymmetry(ways);
+    result = composeFunction(result,rotationFunction);
+  } 
+
   if($("#mirror_grid.mirror.button").hasClass("down")) {
     const columns = $(".grid_mirrors #repeat_x").val();
     const rows = $(".grid_mirrors #repeat_y").val();  
@@ -272,11 +145,6 @@ function updateMirrors() {
   if($("#mirror_y.mirror.button").hasClass("down")) result = composeFunction(result,mirrorY);
   if($("#mirror_tlbr.mirror.button").hasClass("down")) result = composeFunction(result,mirrorDiagonalXY);
   if($("#mirror_trbl.mirror.button").hasClass("down")) result = composeFunction(result,mirrorDiagonalY1MinusX);
-  if($("#mirror_rotational.mirror.button").hasClass("down")) {
-    const ways = $(".rotational_mirrors input").val();
-    const rotationFunction = rotationalSymmetry(ways);
-    result = composeFunction(result,rotationFunction);
-  } 
 
   mirrorFunction=result;
 }
@@ -308,8 +176,8 @@ function createDrawArea(canvas = blankCanvas()) {
   
 
   const image = canvas.ctx.getAllImageData();
-  const undo = [];
-  const redo = [];
+  const undoStack = [];
+  const redoStack = [];
   const layers = [];
 
   layers.push( new Layer("base", canvas));
@@ -381,9 +249,9 @@ function createDrawArea(canvas = blankCanvas()) {
         layer: this.activeLayer,
         data: this.activeLayer.ctx.getAllImageData()
       }
-      undo.push(undoRecord);
-      if (undo.length > undoDepth) undo.shift();
-      redo.length=0;
+      undoStack.push(undoRecord);
+      if (undoStack.length > undoDepth) undoStack.shift();
+      redoStack.length=0;
 
       this.activeLayer.ctx.putImageData(data,0,0);
       this.isDrawing = false;
@@ -469,11 +337,25 @@ function createDrawArea(canvas = blankCanvas()) {
           this.activeLayer = layers[Math.min(layers.length-1,i)];
         }
       }
+      this.updateVisualRepresentation(true);
     },
     addEmptyLayer() {
       let result = new Layer("new layer", canvas)
-      layers.push(result);
+      layers.push(result);      
       return result;
+    }, 
+    insertLayer(layer, below = null) {
+      const indexExisting = layers.indexOf(layer);
+      if (indexExisting !== -1) {
+        layers.splice(indexExisting, 1);
+      }
+    
+      const indexBelow = layers.indexOf(below);
+      if (indexBelow !== -1) {
+        layers.splice(indexBelow, 0, layer);
+      } else {
+        layers.push(layer);
+      }
     }
   }
   eventOverlay.pic = result;
@@ -723,14 +605,6 @@ function handleMouseMove(e) {
 
 
   
-function canvasPngAsBytes (canvas,callback) {
-  function handleBlob(blob) {
-    var reader = new FileReader();
-    reader.onload = function () {	callback(this.result);	};
-    reader.readAsArrayBuffer(blob);
-  }
-  canvas.toBlob(handleBlob);
-}
   
 function handleMouseWheel(e) {
   let direction = -Math.sign(e.deltaY);
@@ -744,10 +618,6 @@ function scalefactorToSize(n) {
   return (Math.pow(2,(n/2)));
 }
 
-function insideBounds(point,bounds) {
-  if (!point) return false;
-  return (point.x>bounds.x && point.y>bounds.y && point.x<bounds.right && point.y<bounds.bottom)
-}
 function setScale(newfactor, around) {
     const pic = activePic 
     const bounds = pic.element.getBoundingClientRect();
@@ -834,17 +704,6 @@ function stopDragging() {
   //console.log("stop dragging");
   $(activePic.element).css("transition" , "");
 }
-
-
-function containerToCanvas(canvas,clientX,clientY) {
-  let canvasSpace= canvas.getBoundingClientRect();
-  let scaleX=canvas.width/canvasSpace.width;
-  let scaleY=canvas.height/canvasSpace.height;
-  let x= (clientX-canvasSpace.x) * scaleX;
-  let y= (clientY-canvasSpace.y) * scaleY;
-
-  return {x,y};
-}  
 
 function brushDiameterControl(id="diameter") {
   const element = document.createElement("canvas");
@@ -962,7 +821,7 @@ function poulateLayerControl() {
       <input type="range" class="opacity" name="opacity" min="0" max="100" step="1" value="100" />
       </div>
     </div>
-    <div class="layer_list">
+    <div class="layer_list layer_dropzone">
   
     </div> 
     <div class="layer_actions">
@@ -996,12 +855,73 @@ function poulateLayerControl() {
     activePic.removeLayer(activePic.activeLayer)
     updateLayerList();
   });
+
+  let dropzone =$(".layer_list.layer_dropzone");
+  dropzone.on("dragover",e=>{
+    dropzone.children().removeClass("insert_after");
+    dropzone.removeClass("insert_top")
+    const insertPoint=findInsertPoint(dropzone[0],e);
+    if (insertPoint !== draggingElement) {
+      if (insertPoint) {
+        insertPoint.classList.add("insert_after");
+      } else {
+        dropzone.addClass("insert_top")
+      }
+      e.preventDefault();
+    }
+  });
+  dropzone.on("drop", e=>{
+    dropzone.removeClass("insert_top")
+    const insertPoint=findInsertPoint(dropzone[0],e);
+    if (insertPoint !== draggingElement) {
+        if (draggingElement) {
+          const layer = draggingElement.layer;
+          const below = insertPoint?.layer;
+          activePic.insertLayer(layer,below);
+          updateLayerList();
+          activePic.updateVisualRepresentation();
+        } else {
+          //handle file drop maybe?
+        }
+
+    }
+  })
+}
+
+function findInsertPoint(dropzone, event) {
+  const dropzoneRect = dropzone.getBoundingClientRect();
+  const children = Array.from(dropzone.children);
+
+  // Normalize the event clientY coordinate to the dropzone's coordinate space
+  const eventClientY = event.clientY - dropzoneRect.top;
+
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    const childRect = child.getBoundingClientRect();
+    const childTop = childRect.top - dropzoneRect.top;
+    const childBottom = childTop + childRect.height;
+
+    if (eventClientY >= childTop && eventClientY <= childBottom) {
+      if (child === draggingElement) {
+        return draggingElement; 
+      }
+      if (eventClientY < childTop + childRect.height / 2) {
+        // Event is in the top half of the child element
+        return i === 0 ? null : children[i - 1];
+      } else {
+        // Event is in the bottom half of the child element
+        return child;
+      }
+    }
+  }
+  
+  return children.length > 0 ? children[children.length - 1] : null;  
 }
 
 function updateLayerList() {
   function makeLayerWidget(layer) {    
     const pic=activePic;
-    const result = $(`<div class="layer_widget ${layer===pic.activeLayer?'active':''}">
+    const result = $(`<div class="layer_widget ${layer===pic.activeLayer?'active':''}" draggable="true">
         <div class= "visibilitybox ${layer.visible?'showing':''}"> </div> 
         <canvas class="thumbnail" width="32" height="32"> </canvas>
         <div class="layer_name"> ${layer.title} </div>
@@ -1031,9 +951,17 @@ function updateLayerList() {
     }
     result.onmousedown = e=> {
       if (e.button==0) {      
-        pic.activeLayer=layer;
-        updateLayerList()
+        if (pic.activeLayer !== layer) {
+          pic.activeLayer=layer;
+          updateLayerList()
+        }
       }
+    }
+    result.ondrag = e=>{
+      draggingElement=e.currentTarget;
+    }
+    result.ondragend = e=> {
+      if (draggingElement === e.currentTarget ) draggingElement=null;
     }
 
     return result;
