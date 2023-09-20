@@ -206,9 +206,11 @@ function addCanvasWidget(node,name,inputData,app) {
     draw(ctx, node, width, y) {
       let [nodeWidth,nodeHeight] = node.size;
       if (this.onTopOf) {
+        ctx.globalAlpha=0.5;
         y= this.onTopOf.last_y;
 
       } else {
+        ctx.globalAlpha=1;
         ctx.fillStyle = this.background;
         ctx.fillRect(0,y,width,nodeHeight-y);    
       }
