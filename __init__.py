@@ -111,7 +111,7 @@ class Canvas_Tab:
 
         if 'A' in i.getbands():
             mask_data = np.array(i.getchannel('A')).astype(np.float32) / 255.0
-            mask_data = 1. - torch.from_numpy(mask_data)
+            mask_data = torch.from_numpy(mask_data)
         else:
             mask_data = torch.zeros((64,64), dtype=torch.float32, device="cpu")
 
