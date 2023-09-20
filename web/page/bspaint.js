@@ -10,9 +10,9 @@ if (location.pathname.includes("/page/")) {
 var initialPalette = [
   "#000000","#ffffff",
   "#202020","#404040",
-  "#606060","#a0a0a0",
-  "#808080","#a0a0a0",
-  "#c0c060","#e0e0e0",
+  "#606060","#808080",
+  "#a0a0a0","#b8b8b8",
+  "#d0d0d0","#e0e0e0",
   
   "#ff0000","#ff8000",
   "#ffff00","#008000",
@@ -57,14 +57,15 @@ var draggingElement = null;
 
 
 function setExportPic(pic) {
+  setActivePic(pic);
+  
   selectedExport=pic;
   
   $(".sidebutton").removeClass("output")
   const button=pic.element.querySelector(".sidebutton");
   button.classList.add("output");
 
-  pic.commit();
-  
+  pic.updateVisualRepresentation(true);
   transmitMask(pic.mask.canvas);
 }
 
@@ -270,10 +271,16 @@ function createDrawArea(canvas = blankCanvas()) {
       this.updateVisualRepresentation();
 
     },
-
+    clearLayer() {
+      activeOperationCanvas.ctx.clearRect(0,0,activeOperationCanvas.width,activeOperationCanvas.height);
+      this.commit();
+    },
     updateVisualRepresentation(transmit=false) {
-      this.composite();
-      if (transmit && this===selectedExport) transmitCanvas(canvas);          
+      if (transmit && this===selectedExport) {
+        this.composite(true); //suppress mask for transmitted canvas
+        transmitCanvas(canvas);          
+      }
+      this.composite(false);
     },
 
     startDraw(x,y) {
@@ -404,13 +411,13 @@ function initPaint(){
 
 
   $("#pixels").on("click",function(e) {pen=pixelTip;});
-  $("#tip1").on("click",function(e) {tip.size=1; pen=feltTip; });
-  $("#tip2").on("click",function(e) {tip.size=2; pen=feltTip;});
+  $("#pen").on("click",function(e) {pen=feltTip; });
+  $("#clear").on("click",function(e) {activePic.clearLayer()});
   $("#tip3").on("click",function(e) {tip.size=3; pen=feltTip;});
   $("#tip5").on("click",function(e) {tip.size=5; pen=feltTip;});
   $("#tip9").on("click",function(e) {tip.size=9; pen=feltTip;});
-  $("#eraser").on("click",function(e) {tip.size=9; pen=eraserTip;});
-  $("#fine_eraser").on("click",function(e) {tip.size=9; pen=pixelClear;});
+  $("#eraser").on("click",function(e) { pen=eraserTip;});
+  $("#fine_eraser").on("click",function(e) {pen=pixelClear;});
 
   $(".pen.button").on("click", function(e) {
     $(".pen.button").removeClass("down");
@@ -497,7 +504,7 @@ function addNewLayer(image) {
     pic.layers.push(layer);
     pic.activeLayer=layer;
     updateLayerList();
-    pic.updateVisualRepresentation();
+    pic.updateVisualRepresentation(true);
   }
 }
 
@@ -835,7 +842,7 @@ function poulateLayerControl() {
   $('select.composite-mode').on("change", e=>{
     const mode = e.currentTarget.value;
     activePic.activeLayer.compositeOperation=mode; 
-    activePic.updateVisualRepresentation();
+    activePic.updateVisualRepresentation(true);
   }) 
   $("input.maskColor").on("change", e=>{
     lastUsedMaskColor = e.currentTarget.value;
@@ -875,6 +882,10 @@ function poulateLayerControl() {
       e.preventDefault();
     }
   });
+  dropzone.on("dragleave", e=>{
+    dropzone.removeClass("insert_top")
+    dropzone.children().removeClass("insert_after");
+  });
   dropzone.on("drop", e=>{
     dropzone.removeClass("insert_top")
     const insertPoint=findInsertPoint(dropzone[0],e);
@@ -884,7 +895,7 @@ function poulateLayerControl() {
           const below = insertPoint?.layer;
           activePic.insertLayer(layer,below);
           updateLayerList();
-          activePic.updateVisualRepresentation();
+          activePic.updateVisualRepresentation(true);
         } else {
           //handle file drop maybe?
         }
