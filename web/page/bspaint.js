@@ -33,7 +33,7 @@ var tip = {
   }
 
 
-var pen=feltTip;
+var tool=feltTip;
 
 var brushSizeControl = brushDiameterControl("tip_diameter");
 
@@ -387,8 +387,8 @@ function initPaint(){
   $(".background")[0].addEventListener("wheel",handleMouseWheel);
 
   $(".paletteentry").on("mousedown", function(e) {
-    if (![feltTip,pixelTip].includes(pen)) {
-      pen=feltTip;
+    if (![feltTip,pixelTip].includes(tool)) {
+      tool=feltTip;
     }
     let eraser=false;
     let c= $(e.currentTarget).data("colour");
@@ -410,17 +410,17 @@ function initPaint(){
 
 
 
-  $("#pixels").on("click",function(e) {pen=pixelTip;});
-  $("#pen").on("click",function(e) {pen=feltTip; });
+  $("#pixels").on("click",function(e) {tool=pixelTip;});
+  $("#pen").on("click",function(e) {tool=feltTip; });
   $("#clear").on("click",function(e) {activePic.clearLayer()});
-  $("#tip3").on("click",function(e) {tip.size=3; pen=feltTip;});
-  $("#tip5").on("click",function(e) {tip.size=5; pen=feltTip;});
-  $("#tip9").on("click",function(e) {tip.size=9; pen=feltTip;});
-  $("#eraser").on("click",function(e) { pen=eraserTip;});
-  $("#fine_eraser").on("click",function(e) {pen=pixelClear;});
+  $("#tip3").on("click",function(e) {tip.size=3; tool=feltTip;});
+  $("#tip5").on("click",function(e) {tip.size=5; tool=feltTip;});
+  $("#tip9").on("click",function(e) {tip.size=9; tool=feltTip;});
+  $("#eraser").on("click",function(e) { tool=eraserTip;});
+  $("#fine_eraser").on("click",function(e) {tool=pixelClear;});
 
-  $(".pen.button").on("click", function(e) {
-    $(".pen.button").removeClass("down");
+  $(".tool.button").on("click", function(e) {
+    $(".tool.button").removeClass("down");
     $(e.currentTarget).addClass("down");
     brushSizeControl.diameter=tip.size;
   });
@@ -518,7 +518,7 @@ function handleMouseDown(e) {
   
   switch (e.button) {
     case 0:      
-      tip.drawOperation = $("#foreground").data("eraser")?eraserTip:pen;      
+      tip.drawOperation = $("#foreground").data("eraser")?eraserTip:tool;      
       tip.colour = maskLayer?"#000":$("#foreground").val();
       pic.startDraw(e.offsetX,e.offsetY);
       createCaptureOverlay(e.currentTarget)
@@ -536,7 +536,7 @@ function handleMouseDown(e) {
       break;
     case 2:
       tip.colour = $("#background").val();
-      tip.drawOperation = (maskLayer || $("#background").data("eraser"))?eraserTip:pen;
+      tip.drawOperation = (maskLayer || $("#background").data("eraser"))?eraserTip:tool;
       pic.startDraw(e.offsetX,e.offsetY);
       createCaptureOverlay(e.currentTarget)
 
@@ -652,9 +652,9 @@ function setScale(newfactor, around) {
     updateBrushCursor(pic.element);
 }
   
-function pixelTip(ctx,penInfo,strokePath) {
-  console.log(penInfo)
-  ctx.fillStyle=penInfo.colour;
+function pixelTip(ctx,toolInfo,strokePath) {
+  console.log(toolInfo)
+  ctx.fillStyle=toolInfo.colour;
   for (let {x,y} of strokePath) {
     x=Math.floor(x-0.25);
     y=Math.floor(y-0.25);
@@ -662,9 +662,9 @@ function pixelTip(ctx,penInfo,strokePath) {
   };
 }
 
-function feltTip(ctx,penInfo,strokePath) {
-  ctx.lineWidth=penInfo.size;
-  ctx.strokeStyle=penInfo.colour;
+function feltTip(ctx,toolInfo,strokePath) {
+  ctx.lineWidth=toolInfo.size;
+  ctx.strokeStyle=toolInfo.colour;
   ctx.lineCap="round";
   ctx.lineJoin="round";
   ctx.beginPath();
@@ -674,9 +674,9 @@ function feltTip(ctx,penInfo,strokePath) {
   ctx.stroke();
 }
   
-function eraserTip(ctx,penInfo,strokePath) {  
+function eraserTip(ctx,toolInfo,strokePath) {  
   ctx.save();
-  ctx.lineWidth=penInfo.size;
+  ctx.lineWidth=toolInfo.size;
   ctx.strokeStyle="white";
   ctx.lineCap="round";
   ctx.lineJoin="round";
@@ -691,9 +691,9 @@ function eraserTip(ctx,penInfo,strokePath) {
   ctx.restore();
 }
 
-function pixelClear(ctx,penInfo,strokePath) {
-  let x=Math.floor(penInfo.x-0.25);
-  let y=Math.floor(penInfo.y-0.25);
+function pixelClear(ctx,toolInfo,strokePath) {
+  let x=Math.floor(toolInfo.x-0.25);
+  let y=Math.floor(toolInfo.y-0.25);
   ctx.clearRect(x,y,1,1);
   for (let {x,y} of strokePath) {
     x=Math.floor(x-0.25);
