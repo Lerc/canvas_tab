@@ -66,7 +66,7 @@ svg.tool.button {
   fill:currentColor;
 }
 
-#tip1.tool.button {
+#pen.tool.button {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M18 35 12 29 29 11 36 17ZM37 16 30 10A1 1 0 0137 16M16 36 7 40 11 31Z'/%3E%3C/svg%3E");
 }
 

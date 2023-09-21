@@ -397,10 +397,24 @@ function initPaint(){
       eraser = true;
     } 
     if (e.which == 1) {
-      $("#foreground").val(c).data("eraser",eraser);
+      if (e.ctrlKey && !eraser) {
+        c=$("#foreground").val();
+        $(e.currentTarget).data("colour",c).css("background-color",c)
+      } else {
+        $("#foreground").val(c).data("eraser",eraser);
+      }
     }
-    if (e.which == 3) {
-      $("#background").val(c).data("eraser",eraser);
+    if (e.which == 2 && !eraser) {
+      c=$("#foreground").val();
+      $(e.currentTarget).data("colour",c).css("background-color",c)
+    }    
+    if (e.which == 3 && !eraser) {
+      if (e.ctrlKey) {
+        c=$("#background").val();
+        $(e.currentTarget).data("colour",c).css("background-color",c)
+      } else {
+        $("#background").val(c).data("eraser",eraser);
+      }
     }
 
   }).on("contextmenu",
@@ -413,11 +427,13 @@ function initPaint(){
   $("#pixels").on("click",function(e) {tool=pixelTip;});
   $("#pen").on("click",function(e) {tool=feltTip; });
   $("#clear").on("click",function(e) {activePic.clearLayer()});
-  $("#tip3").on("click",function(e) {tip.size=3; tool=feltTip;});
+/*  $("#tip3").on("click",function(e) {tip.size=3; tool=feltTip;});
   $("#tip5").on("click",function(e) {tip.size=5; tool=feltTip;});
   $("#tip9").on("click",function(e) {tip.size=9; tool=feltTip;});
+*/  
   $("#eraser").on("click",function(e) { tool=eraserTip;});
   $("#fine_eraser").on("click",function(e) {tool=pixelClear;});
+  $("#eyedropper").on("click",function(e) { tool=eyeDropper;});
 
   $(".tool.button").on("click", function(e) {
     $(".tool.button").removeClass("down");
@@ -653,13 +669,26 @@ function setScale(newfactor, around) {
 }
   
 function pixelTip(ctx,toolInfo,strokePath) {
-  console.log(toolInfo)
   ctx.fillStyle=toolInfo.colour;
   for (let {x,y} of strokePath) {
     x=Math.floor(x-0.25);
     y=Math.floor(y-0.25);
     ctx.fillRect(x,y,1,1);
   };
+}
+
+function eyeDropper(ctx,toolInfo,strokePath) {
+  const last = strokePath.at(-1);
+  let {x,y} = last;
+  x=Math.floor(x-0.25);
+  y=Math.floor(y-0.25);
+  let canvas = ctx.canvas;
+  if (x>=0 && y>=0 && x<canvas.width && y<canvas.height) {
+    const sample = activePic.canvas.ctx.getImageData(x,y,1,1).data;
+    const toHex = (byte) => byte.toString(16).padStart(2, '0');
+    const color= "#" + toHex(sample[0]) + toHex(sample[1]) + toHex(sample[2]);
+    $("#foreground").val(color)
+  }
 }
 
 function feltTip(ctx,toolInfo,strokePath) {
