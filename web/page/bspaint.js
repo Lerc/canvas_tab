@@ -388,7 +388,7 @@ function initPaint(){
 
   $(".paletteentry").on("mousedown", function(e) {
     if (![feltTip,pixelTip].includes(tool)) {
-      tool=feltTip;
+      setTool(feltTip);
     }
     let eraser=false;
     let c= $(e.currentTarget).data("colour");
@@ -424,16 +424,12 @@ function initPaint(){
 
 
 
-  $("#pixels").on("click",function(e) {tool=pixelTip;});
-  $("#pen").on("click",function(e) {tool=feltTip; });
+  $("#pixels").on("click",function(e) {setTool(pixelTip);});
+  $("#pen").on("click",function(e) {setTool(feltTip); });
   $("#clear").on("click",function(e) {activePic.clearLayer()});
-/*  $("#tip3").on("click",function(e) {tip.size=3; tool=feltTip;});
-  $("#tip5").on("click",function(e) {tip.size=5; tool=feltTip;});
-  $("#tip9").on("click",function(e) {tip.size=9; tool=feltTip;});
-*/  
-  $("#eraser").on("click",function(e) { tool=eraserTip;});
-  $("#fine_eraser").on("click",function(e) {tool=pixelClear;});
-  $("#eyedropper").on("click",function(e) { tool=eyeDropper;});
+  $("#eraser").on("click",function(e) { setTool(eraserTip);});
+  $("#fine_eraser").on("click",function(e) {setTool(pixelClear);});
+  $("#eyedropper").on("click",function(e) { setTool(eyeDropper);});
 
   $(".tool.button").on("click", function(e) {
     $(".tool.button").removeClass("down");
@@ -667,7 +663,14 @@ function setScale(newfactor, around) {
     pic.setTransform();
     updateBrushCursor(pic.element);
 }
-  
+
+function setTool(newValue) {
+  tool=newValue;
+  for (const pic of picStack) {
+    updateBrushCursor(pic.element)
+  }
+}
+
 function pixelTip(ctx,toolInfo,strokePath) {
   ctx.fillStyle=toolInfo.colour;
   for (let {x,y} of strokePath) {
@@ -702,7 +705,9 @@ function feltTip(ctx,toolInfo,strokePath) {
   }
   ctx.stroke();
 }
-  
+feltTip.cursorFunction = circleBrush; 
+
+
 function eraserTip(ctx,toolInfo,strokePath) {  
   ctx.save();
   ctx.lineWidth=toolInfo.size;
@@ -719,6 +724,8 @@ function eraserTip(ctx,toolInfo,strokePath) {
 
   ctx.restore();
 }
+eraserTip.cursorFunction=circleBrush;
+
 
 function pixelClear(ctx,toolInfo,strokePath) {
   let x=Math.floor(toolInfo.x-0.25);
@@ -1034,14 +1041,20 @@ function updateLayerList() {
 }
 
 
-
-function updateBrushCursor(picElement) {
-  const p=picElement;
-  let scale = parseFloat(p.style.getPropertyValue("--scalefactor")); 
+function circleBrush(scale) {
   let newCursor = circleImage(tip.size * scale);
   let offset = (newCursor.width/2)|0;
   let value = `url(${newCursor.toDataURL()}) ${offset} ${offset}, auto `;
   if ((newCursor.width < 2) || (newCursor.width>120)) value="crosshair";
+  return value;
+}
+
+function updateBrushCursor(picElement) {
+  const p=picElement;
+  if (!p) return;
+  let scale = parseFloat(p.style.getPropertyValue("--scalefactor")); 
+  let value ="crosshair";
+  if (tool.cursorFunction) value = tool.cursorFunction(scale);
   p.style.setProperty("cursor",value);
 }
 
