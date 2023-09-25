@@ -98,6 +98,10 @@ svg.tool.button {
   box-sizing:border-box;
 }
 
+.subpanel.actions {
+  position:absolute;
+  right:0.5em;
+}
 .subpanel input {
   display:block;
 }

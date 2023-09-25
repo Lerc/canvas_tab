@@ -7,6 +7,8 @@ if (location.pathname.includes("/page/")) {
   $(initPaint);
 }
 
+var hotkeys = {};
+
 var initialPalette = [
   "#000000","#ffffff",
   "#202020","#404040",
@@ -194,7 +196,9 @@ function createDrawArea(canvas = blankCanvas()) {
   eventOverlay.addEventListener("contextmenu",function(e){e.preventDefault(); return false;});
  
   
-  const result = {element,eventOverlay,image,layers,canvas,mask,
+  const result = {element,eventOverlay,image,mask,
+    get layers() {return layers},
+    get canvas() {return canvas},
     scale:1,
     scalefactor:0,
     offsetX:0,
@@ -208,9 +212,6 @@ function createDrawArea(canvas = blankCanvas()) {
       element.style.setProperty("--scalefactor",scale)
       element.style.setProperty("--translateX",offsetX+"px")
       element.style.setProperty("--translateY",offsetY+"px")
-      
-      //var trans =`translate(${offsetX}px,${offsetY}px) scale(${scale},${scale})`;
-      //$(element).css("transform",trans);
     },
     bringToFront() {
       const oldPos = picStack.indexOf(this);
@@ -247,6 +248,7 @@ function createDrawArea(canvas = blankCanvas()) {
     commit() {
       let data = activeOperationCanvas.ctx.getAllImageData()
       const undoRecord = {
+        type : "layer",
         layer: this.activeLayer,
         data: this.activeLayer.ctx.getAllImageData()
       }
@@ -275,6 +277,11 @@ function createDrawArea(canvas = blankCanvas()) {
       activeOperationCanvas.ctx.clearRect(0,0,activeOperationCanvas.width,activeOperationCanvas.height);
       this.commit();
     },
+    fillLayer(color = "#fff") {
+      activeOperationCanvas.ctx.fillStyle=color;
+      activeOperationCanvas.ctx.fillRect(0,0,activeOperationCanvas.width,activeOperationCanvas.height);
+      this.commit();
+    },
     updateVisualRepresentation(transmit=false) {
       if (transmit && this===selectedExport) {
         this.composite(true); //suppress mask for transmitted canvas
@@ -286,8 +293,6 @@ function createDrawArea(canvas = blankCanvas()) {
     startDraw(x,y) {
       if (!this.activeLayer.visible) return; //don't draw on hidden layers.
       this.strokeModifier=mirrorFunction;
-      //let data = this.activeLayer.ctx.getAllImageData()
-      //activeOperationCanvas.ctx.putImageData(data,0,0);
       this.isDrawing=true;
       this.strokeCoordinates=[{x:x+0.001,y}];
       tip.x=x;
@@ -307,7 +312,6 @@ function createDrawArea(canvas = blankCanvas()) {
 
     draw(x,y) {
       this.strokeCoordinates.push({x,y});      
-
       //This is done in a timeout to allow multiple draw movements
       //to accumulate rather than slowing things down
       if (!updatingStroke) {
@@ -336,6 +340,17 @@ function createDrawArea(canvas = blankCanvas()) {
         },1)
       }      
     },
+    updateLayerList(newList) {
+      const undoRecord = {
+        type: 'layerList',
+        previousList: [...layers]
+      };
+      undoStack.push(undoRecord);
+      if (undoStack.length > undoDepth) undoStack.shift();
+      layers.length = 0;  // Clear the existing array
+      layers.push(...newList);  // Fill with new values
+    },
+/*
     removeLayer(layer=this.activeLayer) {
       const i = layers.indexOf(layer);
       if (i !==-1) {
@@ -363,7 +378,74 @@ function createDrawArea(canvas = blankCanvas()) {
       } else {
         layers.push(layer);
       }
-    }
+    },
+  */
+    addEmptyLayer() {
+      const newLayer = new Layer("new layer", canvas);
+      const newList = [...layers, newLayer];
+      this.updateLayerList(newList);
+      return newLayer;
+    },
+    removeLayer(layer = this.activeLayer) {
+      const newList = layers.filter(l => l !== layer);
+      this.updateLayerList(newList);
+    },
+    insertLayer(layer, below = null) {
+      const newList = [...layers];
+      const indexExisting = newList.indexOf(layer);
+      if (indexExisting !== -1) {
+        newList.splice(indexExisting, 1);
+      }
+      const indexBelow = newList.indexOf(below);
+      if (indexBelow !== -1) {
+        newList.splice(indexBelow, 0, layer);
+      } else {
+        newList.push(layer);
+      }
+      this.updateLayerList(newList);
+    },      
+    undo() {
+      const lastRecord = undoStack.pop();
+      if (lastRecord) {
+        if (lastRecord.type === 'layerList') {
+          redoStack.push({type: 'layerList', previousList: [...layers]});
+          layers.length = 0;
+          layers.push(...lastRecord.previousList);
+        } else if (lastRecord.type === 'layer') {
+          redoStack.push({
+            type: 'layer',
+            layer: lastRecord.layer,
+            data: lastRecord.layer.ctx.getAllImageData()
+          });
+          lastRecord.layer.ctx.putImageData(lastRecord.data, 0, 0);
+        }
+        //... (handle other types of undoRecords)
+      }
+      this.updateVisualRepresentation(true);
+      updateLayerList();
+    },
+    
+    redo() {
+      const lastRecord = redoStack.pop();
+      if (lastRecord) {
+        if (lastRecord.type === 'layerList') {
+          undoStack.push({type: 'layerList', previousList: [...layers]});
+          layers.length = 0;
+          layers.push(...lastRecord.previousList);
+        } else if (lastRecord.type === 'layer') {
+          undoStack.push({
+            type: 'layer',
+            layer: lastRecord.layer,
+            data: lastRecord.layer.ctx.getAllImageData()
+          });
+          lastRecord.layer.ctx.putImageData(lastRecord.data, 0, 0);
+        }
+        //... (handle other types of redoRecords)
+      }
+      this.updateVisualRepresentation(true);
+      updateLayerList();
+    },
+    
   }
   eventOverlay.pic = result;
   sidebar.addEventListener("mousedown",_=>  setExportPic(result))
@@ -408,15 +490,14 @@ function initPaint(){
       c=$("#foreground").val();
       $(e.currentTarget).data("colour",c).css("background-color",c)
     }    
-    if (e.which == 3 && !eraser) {
-      if (e.ctrlKey) {
+    if (e.which == 3 ) {
+      if (e.ctrlKey && !eraser) {
         c=$("#background").val();
         $(e.currentTarget).data("colour",c).css("background-color",c)
       } else {
         $("#background").val(c).data("eraser",eraser);
       }
     }
-
   }).on("contextmenu",
   function(){return false;}
   );
@@ -426,10 +507,13 @@ function initPaint(){
 
   $("#pixels").on("click",function(e) {setTool(pixelTip);});
   $("#pen").on("click",function(e) {setTool(feltTip); });
-  $("#clear").on("click",function(e) {activePic.clearLayer()});
   $("#eraser").on("click",function(e) { setTool(eraserTip);});
   $("#fine_eraser").on("click",function(e) {setTool(pixelClear);});
   $("#eyedropper").on("click",function(e) { setTool(eyeDropper);});
+
+  $("#clear").on("click",function(e) {activePic?.clearLayer()});
+  $("#undo").on("click",function(e) {activePic?.undo()});
+  $("#redo").on("click",function(e) {activePic?.redo()});
 
   $(".tool.button").on("click", function(e) {
     $(".tool.button").removeClass("down");
@@ -446,6 +530,7 @@ function initPaint(){
 
   });
 
+  addEventListener("keydown", handleKeyDown);
 
   $(".panel").append(brushSizeControl).append(`
   <div class="subpanel simple_mirrors">
@@ -456,8 +541,8 @@ function initPaint(){
   </div>  
     <div class="subpanel grid_mirrors">
       <span style="display:inline-block;">
-        <input id="repeat_x" type="number" min="2" max="10" value="3" step="1" required />
-        <input id="repeat_y" type="number" min="2" max="10" value="3" step="1" required />
+        <input id="repeat_x" type="number" min="1" max="10" value="3" step="1" required />
+        <input id="repeat_y" type="number" min="1" max="10" value="3" step="1" required />
       </span>
       <div id="mirror_grid" class="mirror button"></div>
     </div>
@@ -517,6 +602,27 @@ function addNewLayer(image) {
     pic.activeLayer=layer;
     updateLayerList();
     pic.updateVisualRepresentation(true);
+  }
+}
+
+function handleKeyDown(e) {
+  if (!e.key) return;
+  if (e.key === "Dead" ) return;
+  if (e.key === "Unidentified" ) return;
+  
+
+  //checking for hotkeys
+  let keyID = "";
+  if (e.ctrlKey) keyID+="CTRL_"
+  if (e.altKey) keyID+="ALT_"
+  if (e.shiftKey) keyID+="SHIFT_"
+  let key = e.key.toUpperCase();
+  if (key === " ") key = 'SPACE';
+
+  const hotkeyCode= keyID+key;
+  console.log({hotkeyCode})
+  if (hotkeys.hasOwnProperty(hotkeyCode)) {
+    hotkeys[hotkeyCode](); 
   }
 }
 
@@ -1135,3 +1241,22 @@ function createCaptureOverlay(element) {
 function removeCaptureOverlay() {
   $('#global_overlay').remove();
 }
+
+
+
+function fillOrClear(from) {
+  if (from.data("eraser")){
+    activePic?.clearLayer()
+  } else {
+    activePic?.fillLayer(from.val());
+  }   
+}
+ 
+
+hotkeys["CTRL_Z"] = _=>{activePic?.undo()}
+hotkeys["CTRL_SHIFT_Z"] = _=>{activePic?.redo()}
+hotkeys["BACKSPACE"] = _=>{activePic?.clearLayer()}
+
+hotkeys["ALT_BACKSPACE"] = _=>{fillOrClear($("#foreground"))}
+hotkeys["CTRL_BACKSPACE"] = _=>{fillOrClear($("#background"))}
+  
