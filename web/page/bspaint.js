@@ -186,6 +186,7 @@ function createDrawArea(canvas = blankCanvas()) {
 
   layers.push( new Layer("base", canvas));
   var mask =new Layer("mask", canvas,true);
+  mask.opacity = 0.6;
   layers.push(mask);
   
   layers[0].ctx.putImageData(image,0,0);
@@ -600,8 +601,8 @@ function addNewImage(image) {
 
 function addNewLayer(image) {
   if (!selectedExport) {
-      setExportPic(addNewImage(image)); 
-      return;
+    setExportPic(addNewImage(image)); 
+    return;
   } 
   let pic = selectedExport;
   if (pic.canvas.width === image.width && pic.canvas.height==image.height) {
@@ -613,6 +614,9 @@ function addNewLayer(image) {
     pic.activeLayer=layer;
     updateLayerList();
     pic.updateVisualRepresentation(true);
+  } 
+  else {
+    addNewImage(image);
   }
 }
 
