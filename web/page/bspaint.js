@@ -1,5 +1,6 @@
 "use strict"
 var selectedExport;
+var maskStaysOnTop = true;
 
 if (location.pathname.includes("/page/")) {
   //don't init if not in the right path
@@ -184,7 +185,7 @@ function createDrawArea(canvas = blankCanvas()) {
   const layers = [];
 
   layers.push( new Layer("base", canvas));
-  const mask =new Layer("mask", canvas,true);
+  var mask =new Layer("mask", canvas,true);
   layers.push(mask);
   
   layers[0].ctx.putImageData(image,0,0);
@@ -196,9 +197,11 @@ function createDrawArea(canvas = blankCanvas()) {
   eventOverlay.addEventListener("contextmenu",function(e){e.preventDefault(); return false;});
  
   
-  const result = {element,eventOverlay,image,mask,
+  const result = {element,eventOverlay,image,
     get layers() {return layers},
     get canvas() {return canvas},
+    get mask() {return mask},
+    set mask(m) {mask=m},
     scale:1,
     scalefactor:0,
     offsetX:0,
@@ -270,7 +273,7 @@ function createDrawArea(canvas = blankCanvas()) {
       if (activePic===this) {  
         updateLayerList();  //inefficient to remake all controls on edit,  fix this
       }
-      this.updateVisualRepresentation();
+      this.updateVisualRepresentation(false);
 
     },
     clearLayer() {
@@ -282,7 +285,7 @@ function createDrawArea(canvas = blankCanvas()) {
       activeOperationCanvas.ctx.fillRect(0,0,activeOperationCanvas.width,activeOperationCanvas.height);
       this.commit();
     },
-    updateVisualRepresentation(transmit=false) {
+    updateVisualRepresentation(transmit=true) {
       if (transmit && this===selectedExport) {
         this.composite(true); //suppress mask for transmitted canvas
         transmitCanvas(canvas);          
@@ -341,6 +344,14 @@ function createDrawArea(canvas = blankCanvas()) {
       }      
     },
     updateLayerList(newList) {
+      if (maskStaysOnTop && this.mask) {
+        const maskIndex = newList.indexOf(this.mask);
+        console.log({maskIndex})
+        if (maskIndex !== newList.length - 1) {
+          newList.splice(maskIndex, 1);
+          newList.push(this.mask);
+        }
+      }
       const undoRecord = {
         type: 'layerList',
         previousList: [...layers]
@@ -598,7 +609,7 @@ function addNewLayer(image) {
     layer.ctx.drawImage(image,0,0);    
     console.log("new layer", layer)
     console.log(layer.canvas.width, layer.canvas.height)
-    pic.layers.push(layer);
+    pic.insertLayer(layer)
     pic.activeLayer=layer;
     updateLayerList();
     pic.updateVisualRepresentation(true);
@@ -989,7 +1000,7 @@ function poulateLayerControl() {
   $("input.maskColor").on("change", e=>{
     lastUsedMaskColor = e.currentTarget.value;
     activePic.activeLayer.maskColor=lastUsedMaskColor;
-    activePic.updateVisualRepresentation();
+    activePic.updateVisualRepresentation(false);
     updateLayerList();
   });
 
@@ -1006,7 +1017,8 @@ function poulateLayerControl() {
   });
 
   $(".remove_layer").on("click",_=>{
-    activePic.removeLayer(activePic.activeLayer)
+    activePic?.removeLayer(activePic.activeLayer)
+    activePic?.updateVisualRepresentation(true)
     updateLayerList();
   });
 
@@ -1108,12 +1120,19 @@ function updateLayerList() {
       }
     }
     result.onmousedown = e=> {
+      if (e.ctrlKey && e.button==0 && pic.activeLayer?.visible) {
+        pic.removeLayer(layer);
+        pic.updateVisualRepresentation(true)
+        updateLayerList();
+      } else 
       if (e.button==0) {      
         if (pic.activeLayer !== layer) {
           pic.activeLayer=layer;
           updateLayerList()
         }
       }
+
+      
     }
     result.ondrag = e=>{
       draggingElement=e.currentTarget;
