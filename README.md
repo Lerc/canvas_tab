@@ -23,6 +23,7 @@ My main motivation for making this was to develop an inpainting workflow,
 but I have also found it quite useful for scribble base images, 
 
 ![basic usage ](https://raw.githubusercontent.com/Lerc/canvas_tab/main/Canvas_tab_basic.png)
+
 I have been using the controlnet inpaint with a workflow like this.  
 
 ![inpaint workflow](https://raw.githubusercontent.com/Lerc/canvas_tab/main/Inpaint_with_canvas_tab.png)
