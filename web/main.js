@@ -87,13 +87,7 @@ function initEditorNode(node)
   
   node.maskWidget.onTopOf = node.canvasWidget;
 
-  /*
-  node.onExecuted = (output)=> {
-    if (output?.collected_images && editor.channel) {
-      editor.channel.port1.postMessage( {images:output.collected_images})
-    }      
-  }
-  */
+
   return;
 }
 
@@ -141,42 +135,6 @@ function focusEditor() {
       editor.window.focus();
   }
 }
-/*
-function launchEditorWindow(node)  {  
-  if (!(node.editor.window)) {
-     editor.window = window.open('/extensions/canvas_tab/page/index.html');
-     editor.window.addEventListener('load', () => {
-        const channel = new MessageChannel();
-        editor.channel=channel;        
-        editor.window.postMessage('Initiate communication', '*', [channel.port2]);
-
-        channel.port1.onmessage = (event) => {
-          if (event.data instanceof Blob) {
-              node.imageBlob = event.data;
-              const objectURL = URL.createObjectURL(node.imageBlob);
-              const img = new Image();
-      
-              img.onload = () => {
-                node.canvasWidget.image = img;
-                app.graph.setDirtyCanvas(true);
-      
-                URL.revokeObjectURL(objectURL);
-              };
-      
-              img.src = objectURL;
-          } else {
-              console.log('Message received from Image Editor:', event.data);
-          }
-        };
-      });
-  } else {
-    //window was set, we should do some checks to see if it still exists.
-
-    editor.window.focus();
-  }   
-  
-}
-*/
 
 
 async function uploadBlob(blob,filename="blob") {
