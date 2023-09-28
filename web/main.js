@@ -78,7 +78,7 @@ app.registerExtension({
 function initEditorNode(node)
 {
   node.collected_images = [];
-  node.addWidget("button","Edit","bingo", (widget,graphCanvas, node, {x,y}, event) => openOrFocusEditor(node));
+  node.addWidget("button","Edit","bingo", (widget,graphCanvas, node, {x,y}, event) => focusEditor(node));
 
   node.widgets.reverse();// because auto created widget get put in first
 
@@ -102,35 +102,46 @@ function initTransmitNode(node)
   node.collected_images = [];
 
   node.onExecuted = (output)=> {
-    if (output?.collected_images && editor.channel) {
-      editor.channel.port1.postMessage( {images:output.collected_images})
+    if (!editor.window || editor.window.closed) openEditor();
+
+    if (output?.collected_images) {
+      if(editor.channel) {
+        editor.channel.port1.postMessage( {images:output.collected_images})
+      } else {
+        //try again after half a second just in case we caught it setting up.
+        setTimeout(_=>{editor?.channel.port1.postMessage( {images:output.collected_images})}, 500);
+      }
+
     }      
   }
   
   return;
 }
 
+function openEditor() {
+  editor = {};//  start over with new editor;
+  if (getSignal('clientPage')) {
+    //if clientPage is set, there might be a new page to replace the lost one
+    setSignal('findImageEditor')
+    setTimeout(_=>{
+        if (checkAndClear("findImageEditor")) {                    
+            //if the flag is still set by here, assume there's no-one out there
+            editor.window = window.open('/extensions/canvas_tab/page/index.html', plugin_name);                  
+        }    
+    } ,1000)
+  } else { 
+    editor.window = window.open('/extensions/canvas_tab/page/index.html', plugin_name);
+  }
+}
 
-
-function openOrFocusEditor() {
+function focusEditor() {
   if (!editor.window || editor.window.closed) {
-      if (getSignal('clientPage')) {
-          //if clientPage is set, there might be a new page to replace the lost one
-          setSignal('findImageEditor')
-          setTimeout(_=>{
-              if (checkAndClear("findImageEditor")) {                    
-                  //if the flag is still set by here, assume there's no-one out there
-                  editor.window = window.open('/extensions/canvas_tab/page/index.html', plugin_name);                  
-              }    
-          } ,1000)
-      } else { 
-          editor.window = window.open('/extensions/canvas_tab/page/index.html', plugin_name);
-      }
+    openEditor();
   } else {
       editor.window.focus();
   }
 }
-
+/*
 function launchEditorWindow(node)  {  
   if (!(node.editor.window)) {
      editor.window = window.open('/extensions/canvas_tab/page/index.html');
@@ -165,7 +176,7 @@ function launchEditorWindow(node)  {
   }   
   
 }
-
+*/
 
 
 async function uploadBlob(blob,filename="blob") {
