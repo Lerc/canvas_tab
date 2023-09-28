@@ -22,6 +22,9 @@ Middle-click on palette entries sets the palette color to the current foreground
 My main motivation for making this was to develop an inpainting workflow, 
 but I have also found it quite useful for scribble base images, 
 
+This image shows a basic workflow where it simply sends the image back to itself and shows
+previews of the image and mask.   The workflow is also embedded in this image.
+
 ![basic usage ](https://raw.githubusercontent.com/Lerc/canvas_tab/main/Canvas_tab_basic.png)
 
 I have been using the controlnet inpaint with a workflow like this.  
