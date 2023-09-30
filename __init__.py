@@ -1,3 +1,11 @@
+"""
+@author: Lerc
+@title: Canvas Tab
+@nickname: Canvas Tab
+@description: This extension provides a full page image editor with mask support. There are two nodes, one to receive images from the editor and one to send images to the editor.
+"""
+
+
 import torch
 import base64
 import os
@@ -6,7 +14,6 @@ from io import BytesIO
 from PIL import Image, ImageOps
 from PIL.PngImagePlugin import PngInfo
 import numpy as np
-
 
 def image_to_data_url(image):
     buffered = BytesIO()

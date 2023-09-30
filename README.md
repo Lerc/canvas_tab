@@ -18,6 +18,8 @@ You can delete layers by clicking on the layer widget with Ctrl-LefTClick.
 Ctrl-click on palette entries reassigns the palette color tho the current color.
 Middle-click on palette entries sets the palette color to the current foreground color.
 
+Both nodes provided by this extension support receiving files by drag and drop to 
+send images directly to the editor.
 
 My main motivation for making this was to develop an inpainting workflow, 
 but I have also found it quite useful for scribble base images, 
