@@ -73,11 +73,11 @@ function setExportPic(pic) {
 }
 
 function closePic(pic) {
-
+  if (selectedExport===pic) selectedExport=null;
   pic.element.parentElement.removeChild(pic.element);
   if (pic === activePic) {
     const newActive = document.querySelector("#workspace .pic");
-    setActivePic(newActive.pic);
+    setActivePic(newActive?.pic);
   }
 }
 
