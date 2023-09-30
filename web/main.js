@@ -62,10 +62,12 @@ app.registerExtension({
     const title = node.getTitle();
     // node.type not set at this point? 
     if (title==="Edit In Another Tab") {
-      initEditorNode(node) 
+      initEditorNode(node);
+      addDragDropSupport(node);
     }
     else if (title==="Send to Editor Tab") {
-      initTransmitNode(node) 
+      initTransmitNode(node);
+      addDragDropSupport(node);
     }
 
 
@@ -91,21 +93,49 @@ function initEditorNode(node)
   return;
 }
 
+function addDragDropSupport(node) {
+  	// Add handler to check if an image is being dragged over our node
+		node.onDragOver = function (e) {
+			if (e.dataTransfer && e.dataTransfer.items) {
+				const image = [...e.dataTransfer.items].find((f) => f.kind === "file");
+				return !!image;
+			}
+			return false;
+		};
+
+		// On drop upload files
+		node.onDragDrop = function (e) {
+			let handled = false;
+			for (const file of e.dataTransfer.files) {
+				if (file.type.startsWith("image/")) {
+          const url = URL.createObjectURL(file)
+          transmitImages([url])
+          setTimeout(_=>URL.revokeObjectURL(url),1000);					
+					handled = true;
+				}
+			}
+			return handled;
+		};
+
+}
+function transmitImages(images) {
+  if (!editor.window || editor.window.closed) openEditor();
+
+  if(editor.channel) {
+    editor.channel.port1.postMessage({images})
+  } else {
+    //try again after half a second just in case we caught it setting up.
+    setTimeout(_=>{editor?.channel.port1.postMessage({images})}, 500);
+  }
+}
+
 function initTransmitNode(node)
 {
   node.collected_images = [];
 
   node.onExecuted = (output)=> {
-    if (!editor.window || editor.window.closed) openEditor();
-
-    if (output?.collected_images) {
-      if(editor.channel) {
-        editor.channel.port1.postMessage( {images:output.collected_images})
-      } else {
-        //try again after half a second just in case we caught it setting up.
-        setTimeout(_=>{editor?.channel.port1.postMessage( {images:output.collected_images})}, 500);
-      }
-
+    if (output?.collected_images) { 
+      transmitImages(output.collected_images);
     }      
   }
   
