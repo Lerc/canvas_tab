@@ -23,6 +23,7 @@ def image_to_data_url(image):
 
 class Send_To_Editor:
     def __init__(self):
+        self.updateTick = 1
         pass
 
     @classmethod
@@ -46,6 +47,9 @@ class Send_To_Editor:
     OUTPUT_NODE = True
 
     CATEGORY = "image"
+    def IS_CHANGED(self, unique_id, images):
+        self.updateTick+=1
+        return hex(self.updateTick)
 
     def collect_images(self, unique_id,  images=None):
 
