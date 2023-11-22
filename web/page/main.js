@@ -29,13 +29,6 @@ function checkAndClear(key) {
 if (location.pathname.includes("/page/")) {
   console.log("client-page-only code running");
 
-
-  
-//const canvas = document.querySelector("#drawing>canvas")
-//const ctx = canvas.getContext('2d');
-
-let isDrawing = false;
-let drawColor = 'orange';  // default to black
 let portToMain; // variable to hold the MessageChannel port
 
 function transmitCanvas(canvas) {
@@ -54,48 +47,6 @@ function transmitMask(canvas) {
       }
   }
 
-  
-/*
-canvas.addEventListener('mousedown', (e) => {
-    if (e.button === 0) {
-        drawColor = 'black';  // left button
-    } else if (e.button === 2) {
-        drawColor = 'white';  // right button
-    }
-
-    isDrawing = true;
-    drawCircle(e);
-});
-
-canvas.addEventListener('mouseup', () => {
-    isDrawing = false;
-    ctx.beginPath(); // Clear the current path
-    transmitCanvas();
-});
-
-canvas.addEventListener('mousemove', drawCircle);
-
-
-
-function drawCircle(e) {
-    if (!isDrawing) return;
-
-    ctx.lineWidth = 6 * 2; // Circle's radius * 2
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = drawColor;
-
-    ctx.lineTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
-    ctx.stroke();
-
-    ctx.beginPath(); // Begin a new path
-    ctx.moveTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
-}
-
-// Prevent context menu from showing on right-click
-canvas.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-});
-*/
 
 function loadImagefromURL(url) {
   var img = new Image();
@@ -155,20 +106,6 @@ window.addEventListener('message', (event) => {
 }
 });
 
-/*
-window.addEventListener('message', (event) => {
-    if (event.data === 'Initiate communication') {
-        portToMain = event.ports[0];  // Save the port for future use
-        portToMain.postMessage('Hello from sibling!');
-
-        portToMain.onmessage = (messageEvent) => {
-           if (messageEvent.data instanceof Object) {
-            loadImageToCanvas(messageEvent.data.images[0]);
-           } else console.log('Message received from main page:', messageEvent.data);
-        };
-    }
-});
-*/
 
 }; 
 
