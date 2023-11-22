@@ -514,24 +514,17 @@ function initPaint(){
   function(){return false;}
   );
 
+  $("#pen")[0].tool=feltTip;
+  $("#pixels")[0].tool=pixelTip;
+  $("#eraser")[0].tool=eraserTip;
+  $("#fine_eraser")[0].tool=pixelClear;
+  $("#eyedropper")[0].tool=eyeDropper;
 
-
-
-  $("#pixels").on("click",function(e) {setTool(pixelTip);});
-  $("#pen").on("click",function(e) {setTool(feltTip); });
-  $("#eraser").on("click",function(e) { setTool(eraserTip);});
-  $("#fine_eraser").on("click",function(e) {setTool(pixelClear);});
-  $("#eyedropper").on("click",function(e) { setTool(eyeDropper);});
-
+  $(".tool.button").on("click",function(e) {setTool(e.currentTarget.tool);});
+  
   $("#clear").on("click",function(e) {activePic?.clearLayer()});
   $("#undo").on("click",function(e) {activePic?.undo()});
   $("#redo").on("click",function(e) {activePic?.redo()});
-
-  $(".tool.button").on("click", function(e) {
-    $(".tool.button").removeClass("down");
-    $(e.currentTarget).addClass("down");
-    brushSizeControl.diameter=tip.size;
-  });
 
   brushSizeControl.addEventListener("changed", e=> {
     tip.size=brushSizeControl.diameter;
@@ -584,6 +577,7 @@ function initPaint(){
   brushSizeControl.diameter=tip.size;
 
   setExportPic(test2);
+  setTool(feltTip)
 }
 
 function addNewImage(image) {
@@ -790,6 +784,13 @@ function setTool(newValue) {
   for (const pic of picStack) {
     updateBrushCursor(pic.element)
   }
+
+  $(".tool.button").removeClass("down");
+
+  for (let e of $(".tool.button")) {
+    e.classList.toggle("down",(e.tool === tool))
+  };
+  brushSizeControl.diameter=tip.size;
 }
 
 function pixelTip(ctx,toolInfo,strokePath) {
@@ -1283,3 +1284,7 @@ hotkeys["BACKSPACE"] = _=>{activePic?.clearLayer()}
 hotkeys["ALT_BACKSPACE"] = _=>{fillOrClear($("#foreground"))}
 hotkeys["CTRL_BACKSPACE"] = _=>{fillOrClear($("#background"))}
   
+hotkeys["P"] = _=>{setTool(eyeDropper);}
+hotkeys["B"] = _=>{setTool(feltTip);}
+hotkeys["Z"] = _=>{setTool(pixelTip);}
+hotkeys["E"] = _=>{setTool(eraserTip);}
