@@ -7,6 +7,18 @@ body {
   --right-panel-width : 210px;
   background:#f8fcff;
   --label : "image";
+  width:100vw;
+  height:100vh;
+}
+
+@media (max-width: 1250px) {
+  body  {
+    transform-origin: top left;
+    transform: scale(0.75);
+    width:133vw;
+    height:133vh;
+    overflow:hidden;
+    }
 }
 canvas {
   display: block;
