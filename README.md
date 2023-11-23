@@ -4,7 +4,9 @@ ComfyUI canvas editor page
 
 This plugin provides two nodes to provide a full page editor that runs in another tab.
 
-There is an input node and an output node.
+There is an input node `Edit in another Tab ` and an output node `Send to Editor Tab`.
+Both are stored in the images submenu.
+
 
 There is a green Tab on the side of images in the editor,  click on that tab to highlight it. 
 The image with the highlighted tab is sent through to the comfyUI node. 
@@ -21,8 +23,9 @@ Middle-click on palette entries sets the palette color to the current foreground
 Both nodes provided by this extension support receiving files by drag and drop to 
 send images directly to the editor.
 
+
 My main motivation for making this was to develop an inpainting workflow, 
-but I have also found it quite useful for scribble base images, 
+but I have also found it quite useful for scribble based images, 
 
 This image shows a basic workflow where it simply sends the image back to itself and shows
 previews of the image and mask.   The workflow is also embedded in this image.
@@ -36,4 +39,18 @@ I have been using the controlnet inpaint with a workflow like this.
 That workflow should be embedded in this image.
 
 ![Image with embedded Inpaint workflow](https://raw.githubusercontent.com/Lerc/canvas_tab/main/Inpaint_Onion.png)
+
+
+# Hotkeys
+
+ - B for Brush tool
+ - E for Erase tool
+ - Z for pixel editing tool
+ - P for color Picker
+ - BackSpace to clear a layer
+ - ALT_BackSpace to fill the layer with the foreground color
+ - CTRL_Backspace to fill the layer with the background color
+ - CTRL_Z undo
+ - CTRL_SHIFT_Z redo
+
 
