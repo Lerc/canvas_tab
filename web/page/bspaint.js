@@ -567,6 +567,45 @@ function initPaint(){
   updateMirrorGridButtonImage();
   updateMirrorRotationButtonImage();
 
+  $("#newImageBtn").on("click", function() {
+    console.log("click #newImageBtn")
+    $("#newImageModal").addClass("modal-active");
+  });
+  
+  $(".close-button").on("click", function() {
+    $(".modal-active").removeClass("modal-active");
+  });
+  
+  $(".cancel-button").on("click", function() {
+    $(".modal-active").removeClass("modal-active");
+  });
+
+  $(".create-button").on("click", function() {
+    const width = $("#imageWidth").val();
+    const height = $("#imageHeight").val();
+    $(".modal-active").removeClass("modal-active");
+    let area=createDrawArea(blankCanvas(width, height))
+    $("#workspace").append(area.element);
+  });
+  
+  $(window).on("click", function(event) {
+    if ($(event.target).hasClass("modal")) {
+      $(".modal-active").removeClass("modal-active");
+    }
+  });
+  
+  $("#newImageForm").on("submit", function(event) {
+    event.preventDefault();
+  });
+  
+  $(window).on("keydown", function(event) {
+    if (event.key === "Escape" && $(".modal-active").length) {
+      $(".modal-active").removeClass("modal-active");
+    }
+  });
+  
+
+
   window.test1=createDrawArea();
   window.test2=createDrawArea();
 
@@ -1305,7 +1344,10 @@ function fillOrClear(from) {
     activePic?.fillLayer(from.val());
   }   
 }
- 
+
+
+
+
 
 hotkeys["CTRL_Z"] = _=>{activePic?.undo()}
 hotkeys["CTRL_SHIFT_Z"] = _=>{activePic?.redo()}
