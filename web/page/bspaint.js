@@ -521,7 +521,7 @@ function initPaint(){
   $("#eyedropper")[0].tool=eyeDropper;
 
   $(".tool.button").on("click",function(e) {setTool(e.currentTarget.tool);});
-  
+
   $("#clear").on("click",function(e) {activePic?.clearLayer()});
   $("#undo").on("click",function(e) {activePic?.undo()});
   $("#redo").on("click",function(e) {activePic?.redo()});
@@ -1093,6 +1093,12 @@ function findInsertPoint(dropzone, event) {
   return children.length > 0 ? children[children.length - 1] : null;  
 }
 
+function updateLayerTitle(newTitle, layer) {
+  layer.title = newTitle;
+  updateLayerList();
+  activePic.updateVisualRepresentation(true);
+}
+
 function updateLayerList() {
   function makeLayerWidget(layer) {    
     const pic=activePic;
@@ -1109,6 +1115,30 @@ function updateLayerList() {
     const ctx=canvas.getContext("2d");
     ctx.drawImage(layer.canvas,0,0,canvas.width,canvas.height);  
     result.layer=layer;
+
+    // New Code for Renaming
+    const layerNameDiv = result.querySelector('.layer_name');
+    layerNameDiv.ondblclick = function() {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = layer.title;
+        input.className = 'layer_name_input';
+        input.onblur = () => updateLayerTitle(input.value, layer);
+        input.onkeydown = function(e) {
+          if (e.key === 'Backspace') {
+              e.stopPropagation(); 
+          }
+          if (e.key === 'Enter') {
+              updateLayerTitle(input.value, layer);
+              e.preventDefault(); 
+          } else if (e.key === 'Escape') {
+              layerNameDiv.textContent = layer.title;
+          }
+      };
+        layerNameDiv.textContent = '';
+        layerNameDiv.appendChild(input);
+        input.focus();
+    };
 
     result.querySelector(".visibilitybox").onmousedown = e => {
       e.stopPropagation();
