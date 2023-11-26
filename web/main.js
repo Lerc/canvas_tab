@@ -10,6 +10,7 @@ let editor= {};  // one image editor for all nodes, otherwise communication is m
                   // to serve multiple nodes.
 
 const plugin_name = "canvas_link";
+const editor_path = "/extensions/canvas_tab/page/index.html"
 
 function setSignal(key) {
     const keyName = plugin_name+":"+key;
@@ -39,13 +40,13 @@ app.registerExtension({
 	  name: "canvas_tab",
   init() {
     console.log("init:"+this.name)
-    installStorageListener();
     checkForExistingEditor();
     const blankImage=document.createElement("canvas");
     blankImage.width=64;
     blankImage.height=64;
     blankImage.toBlob(a=>dummyBlob=a)
 
+    addEventListener("message",handleWindowMessage)
   },
 
   async beforeRegisterNodeDef(nodeType, nodeData, app) {
@@ -89,7 +90,7 @@ function initEditorNode(node)
   
   node.maskWidget.onTopOf = node.canvasWidget;
 
-
+  editor.channel.port1.postMessage({retransmit:true})
   return;
 }
 
@@ -119,13 +120,14 @@ function addDragDropSupport(node) {
 
 }
 function transmitImages(images) {
+  console.log("transmit",editor)
   if (!editor.window || editor.window.closed) openEditor();
 
   if(editor.channel) {
     editor.channel.port1.postMessage({images})
   } else {
     //try again after half a second just in case we caught it setting up.
-    setTimeout(_=>{editor?.channel.port1.postMessage({images})}, 500);
+    setTimeout(_=>{editor?.channel?.port1.postMessage({images})}, 500);
   }
 }
 
@@ -150,11 +152,13 @@ function openEditor() {
     setTimeout(_=>{
         if (checkAndClear("findImageEditor")) {                    
             //if the flag is still set by here, assume there's no-one out there
-            editor.window = window.open('/extensions/canvas_tab/page/index.html', plugin_name);                  
+            console.log("open window a")
+            editor.window = window.open(editor_path, plugin_name);                  
         }    
     } ,1000)
   } else { 
-    editor.window = window.open('/extensions/canvas_tab/page/index.html', plugin_name);
+    console.log("open window b")
+    editor.window = window.open(editor_path, plugin_name);
   }
 }
 
@@ -194,6 +198,9 @@ function addCanvasWidget(node,name,inputData,app) {
     name,
     size: [128,128],
     image: null,
+    sendBlobRequired : false,
+    uploadedBlobName : "", 
+    _blob: null,
     background :"#8888",
     _value : "",
     get value() {
@@ -201,6 +208,13 @@ function addCanvasWidget(node,name,inputData,app) {
     },
     set value(newValue) {
       this._value=newValue
+    },
+    get blob() {
+      return this._blob;
+    },
+    set blob(newValue) {
+      this._blob=newValue;
+      this.sendBlobRequired = true;
     },
     draw(ctx, node, width, y) {
       let [nodeWidth,nodeHeight] = node.size;
@@ -235,10 +249,12 @@ function addCanvasWidget(node,name,inputData,app) {
       let widget = node.widgets[widgetIndex];
       let blob = widget.blob;
       if (!(blob instanceof Blob))  blob = dummyBlob;
-      
-      let result = await uploadBlob(blob,widget.name+"_Image.png")
-      if (result) {
-         return result.name;
+      if (widget.sendBlobRequired) {
+        let result = await uploadBlob(blob,widget.name+"_Image.png")        
+        if (result) {
+          widget.uploadedBlobName = result.name;
+          widget.sendBlobRequired=false;
+        }
       }
       return "";
     }
@@ -268,6 +284,17 @@ function loadBlobIntoWidget(widget, blob) {
   img.src = objectURL;
 }
 
+function handleWindowMessage(e) {
+
+  if (typeof e.data === "object"  && e.data?.category === plugin_name) {
+    let data = e.data.data;
+    if (data == "Editor Here") {
+      editor.window = e.source;
+      initiateCommunication();
+    } else  console.log("window message received",e)
+  }
+}
+
 function messageFromEditor(event) {
   const nodes =  app.graph.findNodesByType("Canvas_Tab");
   //send same thing to all of the Canvas_Tab nodes
@@ -286,26 +313,10 @@ function messageFromEditor(event) {
 }
 
 function checkForExistingEditor() {
-  if (checkAndClear('clientAttached')) {
+  if (getSignal('clientPage')) {
       setSignal("findImageEditor")
       // Signal the Image Editor page to identify itself for reattachment
   }
 }
 
-function installStorageListener() {
-  window.addEventListener('storage', (event) => {
-    if (event.key.startsWith(plugin_name)) {
-        const key = event.key.slice(plugin_name.length+1);
-        if (key === 'reconnect' && event.newValue === 'true') {
-            clearSignal('reconnect');
-            initiateCommunication();
-        }
-    
-        if (key === 'foundImageEditor' && event.newValue === 'true') {
-            editor.window = window.open('', plugin_name);
-            initiateCommunication();
-            clearSignal('foundImageEditor');
-        }    
-    }
-  });
-}
+

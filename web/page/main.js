@@ -73,34 +73,38 @@ window.addEventListener('load', () => {
   } else {
       setSignal("clientPage");
   }
-  clearSignal("reconnect");// zap any existing signal to trigger change event on other side
-  setSignal("reconnect");// Signal the main page to reconnect
+  console.log("at load time our opener was ", window.opener)
+  window.opener.postMessage({category:plugin_name,data:"Editor Here"})
+
 });
 
 window.addEventListener("unload", _=> clearSignal("clientPage"));
 
 window.addEventListener('storage', (event) => {  
   if (checkAndClear('findImageEditor')) {
-      // Signal the main page that the Image editor page is here
-      setSignal("foundImageEditor")
+      window.opener.postMessage({category:plugin_name,data:"Editor Here"})
+
   }
 });
 
 
 window.addEventListener('message', (event) => {
   if (event.data === 'Initiate communication') {
-      setSignal("clientAttached");
       portToMain = event.ports[0];  // Save the port for future use
       portToMain.postMessage('Hello from Image_editor!');
-      //transmitCanvas();
 
-      portToMain.onmessage = (messageEvent) => {
-        console.log(messageEvent)
-        if (messageEvent.data instanceof Object) {
-            const images=messageEvent.data.images[0];
+      portToMain.onmessage = (messageEvent) => {        
+        if (messageEvent.data instanceof Object) {            
+            const data = messageEvent.data;
+            const images=data.images;            
             if (images?.length > 0) {
-                loadImagefromURL(messageEvent.data.images[0]);
+                loadImagefromURL(images[0]);
             }
+
+            if (data?.retransmit) {
+                activePic.updateVisualRepresentation(true);
+            }
+            
         } else console.log('Message received from main page:', messageEvent.data);
      };
 }
