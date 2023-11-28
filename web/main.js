@@ -198,7 +198,7 @@ function addCanvasWidget(node,name,inputData,app) {
     name,
     size: [128,128],
     image: null,
-    sendBlobRequired : false,
+    sendBlobRequired : true,
     uploadedBlobName : "", 
     _blob: null,
     background :"#8888",
@@ -256,7 +256,8 @@ function addCanvasWidget(node,name,inputData,app) {
           widget.sendBlobRequired=false;
         }
       }
-      return "";
+      console.log(widget)
+      return widget.uploadedBlobName;
     }
   }
   node.addCustomWidget(widget);
