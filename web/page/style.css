@@ -417,6 +417,11 @@ input[type="color"] {
   line-height: 36px;
   width: 60%; 
 }
+
+.layer_widget.target .layer_name::before {
+  color:red;
+  content: "◎";
+}
 #layer_control .layer_name_input {
   width: 80%; 
   border: none;

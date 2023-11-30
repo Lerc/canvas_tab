@@ -58,13 +58,29 @@ function loadImagefromURL(url) {
         break;
         case "image":
         setExportPic(addNewImage(img));    
-
         break;
+        case "replace_target":
+            if (targetLayer !== null) {
+                replaceLayerContent(targetLayer, img);
+            }
+            break;
+      
         case "ignore":
         default: 
     }
   };
   img.src = url;
+}
+
+function replaceLayerContent(layer, image) {
+    const ctx = layer.canvas.getContext('2d');
+    ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height); 
+    ctx.drawImage(image, 0, 0, layer.canvas.width, layer.canvas.height); 
+    
+    if (activePic===layer.parentPic) {  
+        updateLayerList();  
+    }
+    layer.parentPic.updateVisualRepresentation(false);
 }
 
 window.addEventListener('load', () => {

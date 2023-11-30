@@ -43,6 +43,7 @@ var brushSizeControl = brushDiameterControl("tip_diameter");
 var picStack = [];
 
 var activePic;
+var targetLayer = null; 
 
 function setActivePic(newValue) {
   activePic=newValue;
@@ -91,7 +92,8 @@ class Layer {
   compositeOperation = "source-over";
   opacity = 1;
   _maskColor = lastUsedMaskColor;
-  constructor (title, {width,height}, mask = false)  {
+  constructor (pic,title, {width,height}, mask = false)  {
+    this.parentPic = pic;
     this.canvas.width=width;
     this.canvas.height=height;
     this.mask = mask;
@@ -183,14 +185,7 @@ function createDrawArea(canvas = blankCanvas()) {
   const undoStack = [];
   const redoStack = [];
   const layers = [];
-
-  layers.push( new Layer("base", canvas));
-  var mask =new Layer("mask", canvas,true);
-  mask.opacity = 0.6;
-  layers.push(mask);
-  
-  layers[0].ctx.putImageData(image,0,0);
-  activeOperationCanvas.ctx.putImageData(image,0,0);
+  var mask;
 
   eventOverlay.addEventListener("mousedown", handleMouseDown);
   eventOverlay.addEventListener("mouseup", handleMouseUp);
@@ -198,7 +193,7 @@ function createDrawArea(canvas = blankCanvas()) {
   eventOverlay.addEventListener("contextmenu",function(e){e.preventDefault(); return false;});
  
   
-  const result = {element,eventOverlay,image,
+  const pic = {element,eventOverlay,image,
     get layers() {return layers},
     get canvas() {return canvas},
     get mask() {return mask},
@@ -208,7 +203,7 @@ function createDrawArea(canvas = blankCanvas()) {
     offsetX:0,
     offsetY:0,
     isDrawing:false,
-    activeLayer:layers[0],
+    activeLayer:null,
     strokeCoordinates :[], 
     strokeModifier: a=>a,
     setTransform( ) {
@@ -393,7 +388,7 @@ function createDrawArea(canvas = blankCanvas()) {
     },
   */
     addEmptyLayer() {
-      const newLayer = new Layer("new layer", canvas);
+      const newLayer = new Layer(this,"new layer", canvas);
       const newList = [...layers, newLayer];
       this.updateLayerList(newList);
       return newLayer;
@@ -456,16 +451,28 @@ function createDrawArea(canvas = blankCanvas()) {
       }
       this.updateVisualRepresentation(true);
       updateLayerList();
-    },
-    
+    },    
   }
-  eventOverlay.pic = result;
-  sidebar.addEventListener("mousedown",_=>  setExportPic(result))
-  closeButton.addEventListener("click",_=>  closePic(result))
 
-  result.setTransform();
-  setActivePic(result)
-  return result;
+  layers.push( new Layer(pic,"base", canvas));
+  
+  mask = new Layer(pic,"mask", canvas,true);
+  mask.opacity = 0.6;
+  layers.push(mask);
+  
+  pic.activeLayer= layers[0];
+  
+  layers[0].ctx.putImageData(image,0,0);
+  activeOperationCanvas.ctx.putImageData(image,0,0);
+
+  
+  eventOverlay.pic = pic;
+  sidebar.addEventListener("mousedown",_=>  setExportPic(pic))
+  closeButton.addEventListener("click",_=>  closePic(pic))
+
+  pic.setTransform();
+  setActivePic(pic)
+  return pic;
 }
 
 
@@ -639,7 +646,7 @@ function addNewLayer(image) {
   } 
   let pic = selectedExport;
   if (pic.canvas.width === image.width && pic.canvas.height==image.height) {
-    const layer = new Layer("generation",pic.canvas);
+    const layer = new Layer(pic,"generation",pic.canvas);
     layer.ctx.drawImage(image,0,0);    
     console.log("new layer", layer)
     console.log(layer.canvas.width, layer.canvas.height)
@@ -1141,7 +1148,7 @@ function updateLayerTitle(newTitle, layer) {
 function updateLayerList() {
   function makeLayerWidget(layer) {    
     const pic=activePic;
-    const result = $(`<div class="layer_widget ${layer===pic.activeLayer?'active':''}" draggable="true">
+    const result = $(`<div class="layer_widget ${layer===pic.activeLayer?'active':''} ${targetLayer==layer?'target':''}" draggable="true">
         <div class= "visibilitybox ${layer.visible?'showing':''}"> </div> 
         <canvas class="thumbnail" width="32" height="32"> </canvas>
         <div class="layer_name"> ${layer.title} </div>
@@ -1155,7 +1162,7 @@ function updateLayerList() {
     ctx.drawImage(layer.canvas,0,0,canvas.width,canvas.height);  
     result.layer=layer;
 
-    // New Code for Renaming
+    //  Renaming handler
     const layerNameDiv = result.querySelector('.layer_name');
     layerNameDiv.ondblclick = function() {
         const input = document.createElement('input');
@@ -1179,12 +1186,24 @@ function updateLayerList() {
         input.focus();
     };
 
+    
+
     result.querySelector(".visibilitybox").onmousedown = e => {
       e.stopPropagation();
       layer.visible=!layer.visible;
       pic.updateVisualRepresentation(true);
       updateLayerList();
     }
+    result.addEventListener("contextmenu", e=>e.preventDefault()) 
+
+    result.addEventListener('mousedown', (e) => {
+      // Check for non-mask layer, middle mouse button click or left click with Ctrl key
+      if (!layer.mask && (e.button === 2) ) {
+        targetLayer = (targetLayer === layer) ? null : layer;
+        e.preventDefault(); 
+        updateLayerList();
+      }
+    });
 
     if (layer.mask) {
         result.querySelector(".checkbox").onmousedown = e => {
