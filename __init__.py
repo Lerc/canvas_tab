@@ -76,8 +76,6 @@ class Canvas_Tab:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "mask": ("CANVAS",),                                
-                "canvas": ("CANVAS",),
             }, 
             "hidden": {
                "unique_id":"UNIQUE_ID",
