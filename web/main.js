@@ -38,7 +38,7 @@ function checkAndClear(key) {
 
 app.registerExtension({
 	  name: "canvas_tab",
-  init() {
+  async init() {
     console.log("init:"+this.name)
     checkForExistingEditor();
     const blankImage=document.createElement("canvas");
@@ -51,7 +51,8 @@ app.registerExtension({
 
   async beforeRegisterNodeDef(nodeType, nodeData, app) {
   },
-  getCustomWidgets(app) {
+
+  async getCustomWidgets(app) {
     return {
       CANVAS(node,inputName,inputData,app) {
         return addCanvasWidget(node,inputName,inputData, app)
@@ -71,7 +72,6 @@ app.registerExtension({
       addDragDropSupport(node);
     }
 
-
   }
 });
 
@@ -82,12 +82,12 @@ function initEditorNode(node)
 {
   node.collected_images = [];
   node.addWidget("button","Edit","bingo", (widget,graphCanvas, node, {x,y}, event) => focusEditor(node));
-
   node.widgets.reverse();// because auto created widget get put in first
 
-  node.canvasWidget = node.widgets[1];
+  node.canvasWidget=node.widgets[1];
   node.maskWidget=node.widgets[2];
   
+  console.log(node);
   node.maskWidget.onTopOf = node.canvasWidget;
 
   editor.channel.port1.postMessage({retransmit:true})
