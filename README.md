@@ -2,7 +2,7 @@
 ComfyUI canvas editor page
 
 ## Updates 
-
+ - 2023-12-2  Added Trigger Queue on change toggle.   
  - 2023-11-30 Added  "Replace Targeted Layer" as an input mode,  right click on a layer to set it as target to be replaced
 
 
@@ -10,6 +10,9 @@ This plugin provides two nodes to provide a full page editor that runs in anothe
 
 There is an input node `Edit in another Tab ` and an output node `Send to Editor Tab`.
 Both are stored in the images submenu.
+
+The can be set to trigger a queue on change.  if there is something in the queue already it will wait until the queue empties before
+triggering a new Queue. This should result in only one queued entry triggered by this node at a time.
 
 ## Installation
 The recommended way to install is via comfy manager.  This will automatically handle the web directory.

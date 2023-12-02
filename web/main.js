@@ -2,6 +2,9 @@ import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js"
 import { ComfyWidgets } from "/scripts/widgets.js";
 
+let autoQueueInProgress = false;
+let anotherQueueWaiting = false;
+
 let myticker =0; 
 let dummyBlob;
 let editor= {};  // one image editor for all nodes, otherwise communication is messy when reload happens
@@ -35,6 +38,18 @@ function checkAndClear(key) {
 }
 
 
+function handleStatusUpdate(e) {
+  const detail = e.detail;
+  if (detail?.exec_info?.queue_remaining === 0) {
+    console.log({anotherQueueWaiting,autoQueueInProgress})
+    if (anotherQueueWaiting) {
+      app.queuePrompt();
+      anotherQueueWaiting=false;
+    } else {
+      autoQueueInProgress=false;
+    }
+  }
+}
 
 app.registerExtension({
 	  name: "canvas_tab",
@@ -47,6 +62,7 @@ app.registerExtension({
     blankImage.toBlob(a=>dummyBlob=a)
 
     addEventListener("message",handleWindowMessage)
+    api.addEventListener("status", handleStatusUpdate)
   },
 
   async beforeRegisterNodeDef(nodeType, nodeData, app) {
@@ -82,15 +98,17 @@ function initEditorNode(node)
 {
   node.collected_images = [];
   node.addWidget("button","Edit","bingo", (widget,graphCanvas, node, {x,y}, event) => focusEditor(node));
+  node.triggerQueue=node.addWidget("toggle","Queue on change",false,_=>{});
   node.widgets.reverse();// because auto created widget get put in first
 
-  node.canvasWidget=node.widgets[1];
-  node.maskWidget=node.widgets[2];
-  
-  console.log(node);
+  node.canvasWidget=node.widgets[2];
+  node.maskWidget=node.widgets[3];
+    
   node.maskWidget.onTopOf = node.canvasWidget;
 
   editor.channel.port1.postMessage({retransmit:true})
+
+
   return;
 }
 
@@ -203,6 +221,7 @@ function addCanvasWidget(node,name,inputData,app) {
     _blob: null,
     background :"#8888",
     _value : "",
+    updating : false,
     get value() {
       return this._value 
     },
@@ -273,16 +292,24 @@ function initiateCommunication() {
   }
 }
 
-function loadBlobIntoWidget(widget, blob) {
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+
+    img.onload = () => resolve(img);
+    img.onerror = (e) => reject(new Error(`Failed to load image at ${url}`));
+
+    img.src = url;
+  });
+}
+
+async function loadBlobIntoWidget(widget, blob) {
   const objectURL = URL.createObjectURL(blob);
-  const img = new Image();
-  img.onload = () => {
-        widget.blob = blob;
-        widget.image = img;
-        app.graph.setDirtyCanvas(true);
-        URL.revokeObjectURL(objectURL);
-  };
-  img.src = objectURL;
+  const img = await loadImage(objectURL);
+  widget.blob = blob;
+  widget.image = img;
+  app.graph.setDirtyCanvas(true);
+  URL.revokeObjectURL(objectURL);        
 }
 
 function handleWindowMessage(e) {
@@ -296,20 +323,30 @@ function handleWindowMessage(e) {
   }
 }
 
-function messageFromEditor(event) {
+async function messageFromEditor(event) {
   const nodes =  app.graph.findNodesByType("Canvas_Tab");
   //send same thing to all of the Canvas_Tab nodes
+  let queue = false;
   if (event.data.image instanceof Blob) {
     for (const node of nodes) {
-      loadBlobIntoWidget(node.canvasWidget,event.data.image);
-    }
-  }
+      await loadBlobIntoWidget(node.canvasWidget,event.data.image);
+      if (node.triggerQueue.value) queue=true;
+
+    }  
+  } 
   if (event.data.mask instanceof Blob) {
     for (const node of nodes) {
-      loadBlobIntoWidget(node.maskWidget,event.data.mask);
+      await loadBlobIntoWidget(node.maskWidget,event.data.mask);
+      if (node.triggerQueue) queue=true;
     }
-  } else {
-    console.log('Message received from Image Editor:', event.data);
+  }
+  if (queue) {
+    if (autoQueueInProgress) {
+      anotherQueueWaiting=true;
+    } else {
+      app.queuePrompt();
+      autoQueueInProgress=true;
+    }
   }
 }
 
