@@ -15,12 +15,7 @@ The can be set to trigger a queue on change.  if there is something in the queue
 triggering a new Queue. This should result in only one queued entry triggered by this node at a time.
 
 ## Installation
-The recommended way to install is via comfy manager.  This will automatically handle the web directory.
-
-### Manual installation
-You can manually install by cloning this repo into the custom_nodes directory and either creating a symlink or copying the files in the web sub directory into web/extensions/canvas_tab.
-
-using a symlink from web/extensions/canvas_tab ==> custom_nodes/canvas_tab/web should avoid having to re-copy files when you update.
+You can install either though comfy manager or by cloning this repository into the custom nodes directory.
 
 ## User Interface
 You can edit multiple images at once.  
