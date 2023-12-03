@@ -41,6 +41,7 @@ send images directly to the editor.
  - E for Erase tool
  - Z for pixel editing tool
  - P for color Picker
+ - [ and ] to decrease and increase bush radius
  - BackSpace to clear a layer
  - ALT_BackSpace to fill the layer with the foreground color
  - CTRL_Backspace to fill the layer with the background color

@@ -459,7 +459,6 @@ function createDrawArea(canvas = blankCanvas()) {
   mask = new Layer(pic,"mask", canvas,true);
   mask.opacity = 0.6;
   layers.push(mask);
-  
   pic.activeLayer= layers[0];
   
   layers[0].ctx.putImageData(image,0,0);
@@ -1379,3 +1378,7 @@ hotkeys["P"] = _=>{setTool(eyeDropper);}
 hotkeys["B"] = _=>{setTool(feltTip);}
 hotkeys["Z"] = _=>{setTool(pixelTip);}
 hotkeys["E"] = _=>{setTool(eraserTip);}
+
+hotkeys["]"] = _=>{brushSizeControl.diameter+=1}
+hotkeys["["] = _=>{brushSizeControl.diameter-=1;}
+
