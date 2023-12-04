@@ -393,6 +393,22 @@ function createDrawArea(canvas = blankCanvas()) {
       this.updateLayerList(newList);
       return newLayer;
     },
+    addDuplicateLayer(layer) {
+      if (!layer) {
+          return this.addEmptyLayer();
+      } else {
+          // Duplicate the provided layer
+          const newLayer = new Layer(this, layer.title, {width: layer.canvas.width, height: layer.canvas.height}, layer.mask);
+          newLayer.ctx.drawImage(layer.canvas, 0, 0); // Copy the content of the original layer
+          newLayer.visible = layer.visible;
+          newLayer.compositeOperation = layer.compositeOperation;
+          newLayer.opacity = layer.opacity;
+          const newList = [...this.layers, newLayer];
+          this.updateLayerList(newList);  
+          return newLayer;
+      }
+    
+    },
     removeLayer(layer = this.activeLayer) {
       const newList = layers.filter(l => l !== layer);
       this.updateLayerList(newList);
@@ -1035,8 +1051,9 @@ function poulateLayerControl() {
   
     </div> 
     <div class="layer_actions">
-      <div class="add_layer"></div>
-      <div class="remove_layer"></div>
+    <div class="add_layer" title="New empty layer"></div>
+    <div class="duplicate_layer" title="duplicate current layer.  Ctrl duplicate target layer"></div>
+    <div class="remove_layer" title="delete selected layer"></div>
     </div>
   `)
 
@@ -1063,6 +1080,13 @@ function poulateLayerControl() {
 
   $(".add_layer").on("click",_=>{
     activePic.activeLayer = activePic.addEmptyLayer();
+    updateLayerList();
+  });
+
+  $(".duplicate_layer").on("click",e=>{
+    const layer = e.ctrlKey?targetLayer:activePic.activeLayer;
+    activePic.activeLayer = activePic.addDuplicateLayer(layer);
+    activePic.updateVisualRepresentation();
     updateLayerList();
   });
 

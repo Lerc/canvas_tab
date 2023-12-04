@@ -2,6 +2,7 @@
 ComfyUI canvas editor page
 
 ## Updates 
+ - 2023-12-4  Added hotkeys for Brush Radius,  Added Duplicate Layer button.  Ctrl-Click duplicates the target layer.  
  - 2023-12-2  Added Trigger Queue on change toggle.   
  - 2023-11-30 Added  "Replace Targeted Layer" as an input mode,  right click on a layer to set it as target to be replaced
 

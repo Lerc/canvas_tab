@@ -529,6 +529,18 @@ input[type="color"] {
 
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -12 24 24'%3E%3Cpath d='M -1 7 H 1 V 1 H 7 V -1 H 1 V -7 H -1 V -1 H -7 V 1 H -1' fill='%2300000080'/%3E%3C/svg%3E")
 }
+               
+.layer_actions .duplicate_layer {
+  position:absolute;
+
+  width:24px;
+  height:24px;
+  left:32px;
+  bottom:0px;
+  box-sizing: border-box;
+
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 24'%3E%3Cpath d='m3 9c0-1 1-2 2-2h8c1 0 2 1 2 2v11c0 1-1 2-2 2h-8c-1 0-2-1-2-2v-11m3-1c-1.5 0-2 .5-2 2v9c0 1.5.5 2 2 2h6c1.5 0 2-.5 2-2v-9c0-1.5-.5-2-2-2zm1-1v-2c0-1 1-2 2-2h8c1 0 2 1 2 2v11c0 1-1 2-2 2h-2v-1h1c1.5 0 2-.5 2-2v-9c0-1.5-.5-2-2-2h-6c-1.5 0-2 .5-2 2v1z' fill='%2300000080'/%3E%3C/svg%3E")
+}
 
 
 input.maskColor {
