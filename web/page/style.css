@@ -232,28 +232,6 @@ svg.tool.button {
   transform: translate(var(--translateX),var(--translateY))  scale(var(--scalefactor) )
 }
 
-.pic .closebutton {
-  position: absolute;
-  top: -20px;
-  left: 3px;
-  width: 16px;
-  height: 16px;
-  background: #8008;
-  border-radius: 16px;
-  box-sizing: border-box;
-  border: 1px solid black;
-  cursor: default;
-}
-
-.pic .closebutton:hover {
-  background: #f33f;
-}
-
-.pic .closebutton:active {
-  background: #f00f;
-  border: 3px solid black;
-
-}
 
 input[type="color"] {
   width:48px;
@@ -295,23 +273,60 @@ input[type="color"] {
   transform: translate(-0.5px,-0.5px);
 }
 
-.pic>.eventoverlay::before {
-  content: var(--label);
+.pic .titlebar {
   position: absolute;
-  height: 19px;
+  height: 20px;
   display: inline-block;
-  top: -21px;
+  top: -23px;
   transform-origin: left;
-  background-color: palegoldenrod;
+  background-color: rgb(151, 149, 112);
   border-radius: 0 11px 0 0;
+  padding-top: 1px;
   padding-left: 32px;
-  padding-right: 17px;
+  padding-right: 38px;
   box-shadow: 0px 0px 0px 2px;
   font-family: sans-serif;
 }
 
-.pic[data-z="1"]>.eventoverlay::before {
-  background-color: orange;
+.pic .titlebar.renaming {
+  padding-right: 8px;
+}
+
+.pic .titlebar.renaming .renamebutton {
+  display:none;
+}
+
+.pic[data-z="100"] .titlebar {
+  background-color: palegoldenrod;
+}
+
+.pic .closebutton {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: #8008;
+  border-radius: 16px;
+  box-sizing: border-box;
+  border: 1px solid black;
+  cursor: default;
+}
+
+.pic .closebutton:hover {
+  background: #f33f;
+}
+
+.pic .closebutton:active {
+  background: #f00f;
+  border: 3px solid black;
+
+}
+.pic .title input {
+  font:inherit;
+  border: none;  
+  outline-width: 0;
+  background-color: #0000;
 }
 
 .parameters textarea {
@@ -320,6 +335,16 @@ input[type="color"] {
   display: inline-block;
   border-top :16px solid #aa42;
   height: 100%;
+}
+
+.pic .renamebutton {
+  position: absolute;
+  top: 0px;
+  right: 8px;
+  width:24px;
+  height:24px;
+  box-sizing: border-box;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m3 7h12 0v1h-11v7h11v1h-12zm14-4v15c0 1-1 2-2 2v1c1 0 3-1 3-2 1 1 2 2 3 2v-1c-1 0-2-1-2-2v-2h5v-9h-5v-4c0-1 1-2 2-2v-1c-1 0-3 1-3 2 0-1-2-2-3-2v1c1 0 2 1 2 2m2 5h4v7h-4z' fill='%2300000080'/%3E%3C/svg%3E");
 }
 
 .parameters label {

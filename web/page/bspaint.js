@@ -54,8 +54,13 @@ function setActivePic(newValue) {
 }
 
 var dragging = false;
+var dragButtons = 0;
 var dragStartX;
 var dragStartY;
+
+var mouseDownX=0;
+var mouseDownY=0;
+
 
 var draggingElement = null;
 
@@ -162,17 +167,27 @@ function createDrawArea(canvas = blankCanvas()) {
   const eventOverlay = document.createElement("div");
   const sidebar = document.createElement("div");
   const closeButton = document.createElement("div");
+  const renameButton = document.createElement("div");
+  const titleBar = document.createElement("div");
+  const title = document.createElement("div");
   var updatingStroke=false;
   sidebar.className = "sidebutton";
   closeButton.className = "closebutton";
-
+  renameButton.className = "renamebutton";
+  titleBar.className = "titlebar";
+  title.className = "title";
+  title.textContent="Image Thing";
   element.className="pic";
   eventOverlay.className="eventoverlay fillparent";
 
   element.appendChild(sidebar);
   element.appendChild(canvas);
   element.appendChild(eventOverlay);
-  element.appendChild(closeButton);
+  element.appendChild(titleBar)
+  titleBar.appendChild(closeButton);
+  titleBar.appendChild(title);
+  titleBar.appendChild(renameButton);
+
   canvas.ctx=ctx;
   
   const activeOperationCanvas = document.createElement("canvas");
@@ -191,7 +206,7 @@ function createDrawArea(canvas = blankCanvas()) {
   eventOverlay.addEventListener("mouseup", handleMouseUp);
   eventOverlay.addEventListener("mousemove", handleMouseMove);
   eventOverlay.addEventListener("contextmenu",function(e){e.preventDefault(); return false;});
- 
+  
   
   const pic = {element,eventOverlay,image,
     get layers() {return layers},
@@ -342,7 +357,6 @@ function createDrawArea(canvas = blankCanvas()) {
     updateLayerList(newList) {
       if (maskStaysOnTop && this.mask) {
         const maskIndex = newList.indexOf(this.mask);
-        console.log({maskIndex})
         if (maskIndex !== newList.length - 1) {
           newList.splice(maskIndex, 1);
           newList.push(this.mask);
@@ -483,11 +497,54 @@ function createDrawArea(canvas = blankCanvas()) {
   
   eventOverlay.pic = pic;
   sidebar.addEventListener("mousedown",_=>  setExportPic(pic))
-  closeButton.addEventListener("click",_=>  closePic(pic))
+  closeButton.addEventListener("mousedown",_=>  closePic(pic))
+  titleBar.addEventListener("mousedown",handleTitleBarMouseDown,false);
+  renameButton.addEventListener("mousedown",_=>{
+  
+    const originalValue = title.textContent; 
+    const input = $(`<input type="text" class="title-edit">`)[0];
+    titleBar.classList.add("renaming");
+    input.value=originalValue;
+    title.textContent="";
+    title.appendChild(input);
+    input.focus();
+    input.addEventListener("keydown", e=>{
+      if (e.key === 'Enter') {
+        title.textContent=(input.value !== "")?input.value:originalValue;
+        titleBar.classList.remove("renaming");
+        e.preventDefault(); 
+      } else if (e.key === 'Escape') {
+        title.textContent = originalValue;
+        titleBar.classList.remove("renaming");
+      }
+    },true);
+    input.addEventListener("blur",_=>{
+      title.textContent=(input.value !== "")?input.value:originalValue;
+      titleBar.classList.remove("renaming");
+      
+    })
+  });
 
   pic.setTransform();
   setActivePic(pic)
   return pic;
+  
+  function handleTitleBarMouseDown(e) {
+    if (e.target.nodeName === "INPUT") return;
+    
+    setActivePic(pic);
+    if (e.button === 1 || e.button === 0) {
+      dragStartX = pic.offsetX;
+      dragStartY = pic.offsetY;
+      mouseDownX = e.clientX;
+      mouseDownY = e.clientY;
+      element.style.transition = 'none'; 
+      dragging = true;
+      dragButtons=e.buttons;
+      createCaptureOverlay(eventOverlay);
+      e.preventDefault(); // Prevent text selection during drag
+    }
+  }
 }
 
 
@@ -676,6 +733,9 @@ function addNewLayer(image) {
 }
 
 function handleKeyDown(e) {
+  if (document.activeElement.tagName === 'INPUT') {
+    return;  //suppress hotkeys when an input element has focus.
+  }
   if (!e.key) return;
   if (e.key === "Dead" ) return;
   if (e.key === "Unidentified" ) return;
@@ -690,14 +750,14 @@ function handleKeyDown(e) {
   if (key === " ") key = 'SPACE';
 
   const hotkeyCode= keyID+key;
-  console.log({hotkeyCode})
+  //console.log({hotkeyCode})
   if (hotkeys.hasOwnProperty(hotkeyCode)) {
     hotkeys[hotkeyCode](); 
   }
 }
 
+
 function handleMouseDown(e) {
-  //console.log("mousedown on pic",e);
   let pic = e.currentTarget.pic;
   setActivePic(pic);
   
@@ -719,6 +779,7 @@ function handleMouseDown(e) {
       mouseDownY=e.clientY;
       $(e.currentTarget.pic.element).css("transition" , "none");
       dragging = true;      
+      dragButtons = e.buttons;
       createCaptureOverlay(e.currentTarget)
 
       break;
@@ -742,7 +803,7 @@ function handleMouseLeave(e) {
     let cy = e.pageY-bounds.top;
     console.log({cx,cy})
 
-    if (e.buttons!==4) {
+    if (e.buttons!==dragButtons) {
       stopDragging();
       return;
     }
@@ -761,7 +822,7 @@ function handleMouseUp(e) {
   activePic = pic;
 
   if (dragging) {
-    if (e.buttons!==4) {
+    if (e.buttons!==dragButtons) {
       stopDragging();
       removeCaptureOverlay();
       return;
@@ -778,7 +839,7 @@ function handleMouseMove(e) {
   let pic = e.currentTarget.pic;
   if (pic!==activePic) return;
   if (dragging) {
-    if (e.buttons!==4) {
+    if (e.buttons!==dragButtons) {
       stopDragging();
       removeCaptureOverlay();
       return;
@@ -787,7 +848,6 @@ function handleMouseMove(e) {
     var dy = e.clientY-mouseDownY;
     pic.offsetX=dragStartX+dx;
     pic.offsetY=dragStartY+dy;
-    //console.log({dx,dy});
     pic.setTransform();
   }
   
@@ -921,13 +981,9 @@ function pixelClear(ctx,toolInfo,strokePath) {
   };
 }
 
-
-var mouseDownX=0;
-var mouseDownY=0;
   
 function stopDragging() {
   dragging=false;
-  //console.log("stop dragging");
   $(activePic.element).css("transition" , "");
 }
 
@@ -1007,7 +1063,6 @@ function brushDiameterControl(id="diameter") {
   element.addEventListener("mousedown", handleMouseDown,{capture:true});
   element.addEventListener("mousemove", handleMouseMove);
   element.addEventListener("mouseup", handleMouseUp);
-  
   
   redraw();
   return element
@@ -1192,7 +1247,7 @@ function updateLayerList() {
         input.type = 'text';
         input.value = layer.title;
         input.className = 'layer_name_input';
-        input.onblur = () => updateLayerTitle(input.value, layer);
+        input.onblur = () => {layerNameDiv.removeChild(input);}
         input.onkeydown = function(e) {
           if (e.key === 'Backspace') {
               e.stopPropagation(); 
@@ -1247,8 +1302,6 @@ function updateLayerList() {
           updateLayerList()
         }
       }
-
-      
     }
     result.ondrag = e=>{
       draggingElement=e.currentTarget;
@@ -1263,7 +1316,7 @@ function updateLayerList() {
 
   const layer_control=document.querySelector("#layer_control") 
   const layer_list =layer_control.querySelector(".layer_list") 
-  while(layer_list.firstChild) layer_list.removeChild(layer_list.firstChild)
+  while(layer_list.firstChild) layer_list.removeChild(layer_list.lastChild)
 
   if (!activePic) return;
 
@@ -1378,6 +1431,13 @@ function removeCaptureOverlay() {
 }
 
 
+function changeFrameOfReference(fromElement, x,y, toElement) {
+  const fromBounds=fromElement.getBoundingClientRect();
+  const toBounds = toElement.getBoundingClientRect();
+  x = x + fromBounds.x - toBounds.x;
+  y = y + fromBounds.y - toBounds.y;
+  return {x,y}
+}
 
 function fillOrClear(from) {
   if (from.data("eraser")){
