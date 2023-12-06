@@ -160,7 +160,7 @@ function updateMirrors() {
   mirrorFunction=result;
 }
 
-function createDrawArea(canvas = blankCanvas()) {
+function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
   const undoDepth = 10;
   const element = document.createElement("div")
   const ctx=canvas.getContext("2d");
@@ -176,7 +176,7 @@ function createDrawArea(canvas = blankCanvas()) {
   renameButton.className = "renamebutton";
   titleBar.className = "titlebar";
   title.className = "title";
-  title.textContent="Image Thing";
+  title.textContent=initialTitle;
   element.className="pic";
   eventOverlay.className="eventoverlay fillparent";
 
@@ -226,6 +226,11 @@ function createDrawArea(canvas = blankCanvas()) {
       element.style.setProperty("--scalefactor",scale)
       element.style.setProperty("--translateX",offsetX+"px")
       element.style.setProperty("--translateY",offsetY+"px")
+    },
+    setPosition(x,y) {
+      this.offsetX=x;
+      this.offsetY=y;
+      this.setTransform();
     },
     bringToFront() {
       const oldPos = picStack.indexOf(this);
@@ -531,7 +536,7 @@ function createDrawArea(canvas = blankCanvas()) {
   
   function handleTitleBarMouseDown(e) {
     if (e.target.nodeName === "INPUT") return;
-    
+
     setActivePic(pic);
     if (e.button === 1 || e.button === 0) {
       dragStartX = pic.offsetX;
@@ -685,8 +690,14 @@ function initPaint(){
   
 
 
-  window.test1=createDrawArea();
-  window.test2=createDrawArea();
+  window.test1=createDrawArea(undefined,"Image A");
+  window.test2=createDrawArea(undefined,"Image B");
+  test1.setPosition(30,60) ;
+  test2.setPosition(640,60) ;
+  test1.activeLayer=test1.addEmptyLayer();  
+  targetLayer=test2.addEmptyLayer();  
+
+  //setActivePic(test1);
 
   $("#workspace").append(test1.element);
   $("#workspace").append(test2.element);
@@ -694,7 +705,7 @@ function initPaint(){
 
   brushSizeControl.diameter=tip.size;
 
-  setExportPic(test2);
+  setExportPic(test1);
   setTool(feltTip)
 }
 
