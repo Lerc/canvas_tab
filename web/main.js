@@ -106,7 +106,7 @@ function initEditorNode(node)
     
   node.maskWidget.onTopOf = node.canvasWidget;
 
-  editor.channel.port1.postMessage({retransmit:true})
+  editor?.channel?.port1.postMessage({retransmit:true})
 
 
   return;
