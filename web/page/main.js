@@ -90,7 +90,7 @@ window.addEventListener('load', () => {
       setSignal("clientPage");
   }
   console.log("at load time our opener was ", window.opener)
-  window.opener.postMessage({category:plugin_name,data:"Editor Here"})
+  if (window.opener)  window.opener.postMessage({category:plugin_name,data:"Editor Here"})
 
 });
 
