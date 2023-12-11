@@ -337,7 +337,7 @@ async function messageFromEditor(event) {
   if (event.data.mask instanceof Blob) {
     for (const node of nodes) {
       await loadBlobIntoWidget(node.maskWidget,event.data.mask);
-      if (node.triggerQueue) queue=true;
+      if (node.triggerQueue.value) queue=true;
     }
   }
   if (queue) {
