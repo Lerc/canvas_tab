@@ -8,6 +8,19 @@ if (location.pathname.includes("/page/")) {
   $(initPaint);
 }
 
+var tool=feltTip;
+
+var tip = {
+  lastX : 0,
+  lastY : 0,
+  x : 0.0,
+  y : 0.0,
+  color : "black",
+  size : 5,
+  tool : feltTip,
+}
+
+
 var hotkeys = {};
 
 var initialPalette = [
@@ -25,18 +38,6 @@ var initialPalette = [
   "#a00060","#ff00ff",
   "#ffa0a0","#a06040"];
 
-var tip = {
-    lastX : 0,
-    lastY : 0,
-    x : 0.0,
-    y : 0.0,
-    color : "black",
-    size : 5,
-    drawOperation : feltTip,
-  }
-
-
-var tool=feltTip;
 
 var brushSizeControl = brushDiameterControl("tip_diameter");
 
@@ -344,7 +345,7 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
           const strokes = this.strokeModifier([unitRange])          
           for (const unitStroke of strokes) {
             const stroke=unitStroke.map(({x,y})=>({x:x*canvas.width,y:y*canvas.height}));
-            tip.drawOperation(activeOperationCanvas.ctx,tip,stroke)
+            tip.tool.drawOperation(activeOperationCanvas.ctx,tip,stroke)
           }
           if (this.activeLayer.mask) {
             const ctx=activeOperationCanvas.ctx;
@@ -777,7 +778,7 @@ function handleMouseDown(e) {
   
   switch (e.button) {
     case 0:      
-      tip.drawOperation = $("#foreground").data("eraser")?eraserTip:tool;      
+      tip.tool = $("#foreground").data("eraser")?eraserTip:tool;      
       tip.colour = maskLayer?"#000":$("#foreground").val();
       pic.startDraw(e.offsetX,e.offsetY);
       createCaptureOverlay(e.currentTarget)
@@ -796,7 +797,7 @@ function handleMouseDown(e) {
       break;
     case 2:
       tip.colour = $("#background").val();
-      tip.drawOperation = (maskLayer || $("#background").data("eraser"))?eraserTip:tool;
+      tip.tool = (maskLayer || $("#background").data("eraser"))?eraserTip:tool;
       pic.startDraw(e.offsetX,e.offsetY);
       createCaptureOverlay(e.currentTarget)
 
@@ -925,72 +926,6 @@ function setTool(newValue) {
   brushSizeControl.diameter=tip.size;
 }
 
-function pixelTip(ctx,toolInfo,strokePath) {
-  ctx.fillStyle=toolInfo.colour;
-  for (let {x,y} of strokePath) {
-    x=Math.floor(x-0.25);
-    y=Math.floor(y-0.25);
-    ctx.fillRect(x,y,1,1);
-  };
-}
-
-function eyeDropper(ctx,toolInfo,strokePath) {
-  const last = strokePath.at(-1);
-  let {x,y} = last;
-  x=Math.floor(x-0.25);
-  y=Math.floor(y-0.25);
-  let canvas = ctx.canvas;
-  if (x>=0 && y>=0 && x<canvas.width && y<canvas.height) {
-    const sample = activePic.canvas.ctx.getImageData(x,y,1,1).data;
-    const toHex = (byte) => byte.toString(16).padStart(2, '0');
-    const color= "#" + toHex(sample[0]) + toHex(sample[1]) + toHex(sample[2]);
-    $("#foreground").val(color)
-  }
-}
-
-function feltTip(ctx,toolInfo,strokePath) {
-  ctx.lineWidth=toolInfo.size;
-  ctx.strokeStyle=toolInfo.colour;
-  ctx.lineCap="round";
-  ctx.lineJoin="round";
-  ctx.beginPath();
-  for (let {x,y} of strokePath) {
-    ctx.lineTo(x,y);
-  }
-  ctx.stroke();
-}
-feltTip.cursorFunction = circleBrush; 
-
-
-function eraserTip(ctx,toolInfo,strokePath) {  
-  ctx.save();
-  ctx.lineWidth=toolInfo.size;
-  ctx.strokeStyle="white";
-  ctx.lineCap="round";
-  ctx.lineJoin="round";
-  ctx.globalCompositeOperation="destination-out";
-
-  ctx.beginPath();
-  for (let {x,y} of strokePath) {
-    ctx.lineTo(x,y);
-  }
-  ctx.stroke();
-
-  ctx.restore();
-}
-eraserTip.cursorFunction=circleBrush;
-
-
-function pixelClear(ctx,toolInfo,strokePath) {
-  let x=Math.floor(toolInfo.x-0.25);
-  let y=Math.floor(toolInfo.y-0.25);
-  ctx.clearRect(x,y,1,1);
-  for (let {x,y} of strokePath) {
-    x=Math.floor(x-0.25);
-    y=Math.floor(y-0.25);
-    ctx.clearRect(x,y,1,1);
-  };
-}
 
   
 function stopDragging() {
@@ -1346,13 +1281,6 @@ function updateLayerList() {
 }
 
 
-function circleBrush(scale) {
-  let newCursor = circleImage(tip.size * scale);
-  let offset = (newCursor.width/2)|0;
-  let value = `url(${newCursor.toDataURL()}) ${offset} ${offset}, auto `;
-  if ((newCursor.width < 2) || (newCursor.width>120)) value="crosshair";
-  return value;
-}
 
 function updateBrushCursor(picElement) {
   const p=picElement;

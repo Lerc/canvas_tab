@@ -163,3 +163,12 @@ function canvasPngAsBytes (canvas,callback) {
   }
   canvas.toBlob(handleBlob);
 }
+
+
+function circleBrush(scale) {
+  let newCursor = circleImage(tip.size * scale);
+  let offset = (newCursor.width/2)|0;
+  let value = `url(${newCursor.toDataURL()}) ${offset} ${offset}, auto `;
+  if ((newCursor.width < 2) || (newCursor.width>120)) value="crosshair";
+  return value;
+}
