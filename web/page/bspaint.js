@@ -25,8 +25,7 @@ var hotkeys = {};
 
 var initialPalette = [
   "#000000","#ffffff",
-  "#202020","#404040",
-  "#606060","#808080",
+  "#404040","#808080",
   "#a0a0a0","#b8b8b8",
   "#d0d0d0","#e0e0e0",
   
@@ -36,7 +35,8 @@ var initialPalette = [
   "#0080ff","#50C0ff",
   "#0000ff","#8080ff",
   "#a00060","#ff00ff",
-  "#ffa0a0","#a06040"];
+  "#ffa0a0","#a06040",
+  "#b07050","#904030"];
 
 
 var brushSizeControl = brushDiameterControl("tip_diameter");
@@ -556,6 +556,8 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
 
 
 function initPaint(){ 
+  $("#background").val("#ffffff").data("eraser",true);
+
   var palette=$("#palette");
   for (let i of initialPalette) {
     const e=`<div class="paletteentry" style="background-color:${i}"> </div>`;
@@ -1385,7 +1387,6 @@ function fillOrClear(from) {
     activePic?.fillLayer(from.val());
   }   
 }
-
 
 
 
