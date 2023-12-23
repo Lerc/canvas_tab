@@ -1,5 +1,191 @@
 // these are support functions for bspaint,
 // Nothing in here should rely on global state 
+'use strict';
+
+const abs=Math.abs;
+const min=Math.min;
+const max=Math.max;
+const median = (a, b, c) => max(min(a, b), min(max(a, b), c));
+
+const RadiansToDegrees = 180/Math.PI;
+
+function v2Distance(a,b) {
+  return Math.hypot(a.x-b.x,a.y-b.y);
+}
+
+function v2Length({x,y}) {
+  return Math.hypot(x,y)
+}
+
+function v2Sub(a,b) {
+  return {x:a.x-b.x,y:a.y-b.y};
+}
+function v2Add(a,b) {
+  return {x:a.x+b.x,y:a.y+b.y};
+}
+
+function v2Scale(a,scale) {
+  return {x:a.x*scale,y:a.y*scale}
+}
+
+function v2Normalise(a,length=1) {
+  const scale = length/v2Length(a);
+  return v2Scale(a,scale);
+}
+
+function v2Dot(a,b) {
+  return (a.x*b.x + a.y*b.y);
+}
+
+function v2PurpCW({x, y}) {
+  return {x: y, y: -x};
+}
+
+function v2PurpCCW({x, y}) {
+  return {x: -y, y: x};
+}
+function v2Angle({x,y}) {
+  return Math.atan2(y,x);
+}
+
+var v2Purp=v2PurpCCW;
+
+
+function applyTransform({x,y},transform) {
+  const [a, b, c, d, e, f] = transform;
+
+    // Apply the layer's transformation matrix
+    const newX = a * x + c * y + e;
+    const newY = b * x + d * y + f;
+
+    return { x: newX, y: newY };
+}
+
+function reverseTransform({x,y},transform) {
+  const [a, b, c, d, e, f] = transform;
+
+  // Apply the inverse of the layer's transformation matrix
+  const det = a * d - b * c;
+
+  if (det === 0) {
+    console.error("Transformation matrix is not invertible");
+    return {x,y}
+  }
+
+  const newX = (d * (x - e) - c * (y - f)) / det;
+  const newY = (-b * (x - e) + a * (y - f)) / det;
+
+  return { x: newX, y: newY };
+}
+
+function concatenateTransforms([a1, b1, c1, d1, e1, f1], [a2, b2, c2, d2, e2, f2]) {
+  return [
+      a1 * a2 + c1 * b2,
+      b1 * a2 + d1 * b2,
+      a1 * c2 + c1 * d2,
+      b1 * c2 + d1 * d2,
+      a1 * e2 + c1 * f2 + e1,
+      b1 * e2 + d1 * f2 + f1
+  ];
+}
+
+function scaleTranformWithSkewFudge(A, B, newTransformedA, originalTransform, skewCompensation=0, lockX=false,lockY=false) {
+
+    const transformedA = applyTransform(A, originalTransform);
+    const transformedB = applyTransform(B, originalTransform);
+    // Calculate relative differences
+    const originalRelDiff = {
+        x: transformedB.x - transformedA.x,
+        y: transformedB.y - transformedA.y
+    };
+    const newRelDiff = {
+        x: transformedB.x - newTransformedA.x,
+        y: transformedB.y - newTransformedA.y
+    };
+    
+    const angle = Math.atan2(originalTransform[1], originalTransform[0]);
+    // Calculate inverse rotation matrix
+    const cosTheta = Math.cos(-angle);
+    const sinTheta = Math.sin(-angle);
+    const inverseRotation = [cosTheta, sinTheta, -sinTheta, cosTheta, 0, 0];
+    
+    // Apply inverse rotation to the relative differences
+    const rotatedOriginalRelDiff = applyTransform(originalRelDiff, inverseRotation);
+    const rotatedNewRelDiff = applyTransform(newRelDiff, inverseRotation);
+    
+    // Calculate scale factors
+    let scale = {
+      x: rotatedNewRelDiff.x / rotatedOriginalRelDiff.x, 
+      y: rotatedNewRelDiff.y / rotatedOriginalRelDiff.y
+    }
+    
+    const divergence =v2Dot( v2Normalise(v2Sub(transformedB,transformedA)), v2Purp(v2Normalise(v2Sub(transformedA,newTransformedA))));
+    const lengthAMovement = v2Distance(transformedA,newTransformedA);
+    
+  
+    const scaleTransform= [scale.x + skewCompensation* divergence*lengthAMovement, 0, 0, scale.y, 0, 0];
+  
+    if (lockX) scaleTransform[0]=1;
+    if (lockY) scaleTransform[3]=1;
+    
+    const newTransform = concatenateTransforms(originalTransform,scaleTransform);
+    const newTransformedB = applyTransform(B,newTransform);
+    
+    // Calculate translation to keep B in place
+    const translateX = transformedB.x - newTransformedB.x;
+    const translateY = transformedB.y - newTransformedB.y;
+    
+    const translation = [1, 0, 0, 1, translateX, translateY];
+    
+    const translated = concatenateTransforms(translation,originalTransform);
+    const result = concatenateTransforms(translated,scaleTransform);
+    return result;    
+}
+
+function scaleTransformWithDynamicFix(a,b,desiredA,transform,lockX = false,lockY=false) {
+  function errorVector(skewCandidate) {
+    const newTransform = scaleTranformWithSkewFudge(a, b, desiredA, transform,skewCandidate,false,false);
+    const actualA = applyTransform(a,newTransform);
+    return v2Sub(actualA,desiredA);
+  }
+  const candidate1 = 0;
+  const candidate2 = 110;
+  var skewAdjustment=0;
+
+  let errorVector1 = errorVector(candidate1);
+  if (errorVector1.x===0 && errorVector1.y===0) {
+    //All good to go
+    skewAdjustment=0;
+  } else {
+    let errorVector2 = errorVector(candidate2);
+
+    // Calculate the slopes for x and y components of the error vector
+    let slopeX = (errorVector2.x - errorVector1.x) / (candidate2 - candidate1);
+    let slopeY = (errorVector2.y - errorVector1.y) / (candidate2 - candidate1);
+  
+    // Calculate where the line crosses zero for both components
+    let zeroCrossingX = candidate1 - errorVector1.x / slopeX;
+    let zeroCrossingY = candidate1 - errorVector1.y / slopeY;
+  
+    if (slopeY==0) {
+      skewAdjustment=slopeX;
+    }
+    else if (slopeX == 0) {
+      skewAdjustment=slopeY;
+    } else {
+      //not strictly necessary to average here but we're in full-on dodgy math country now.
+      skewAdjustment = (zeroCrossingX + zeroCrossingY) / 2;      
+    }
+  }
+  
+  return scaleTranformWithSkewFudge(a,b,desiredA,transform,skewAdjustment,lockX,lockY)
+}
+
+
+function scaleTransformByHandle(a, stationaryPoint, desiredTransformedA, originalTransform, lockX = false, lockY=false) {
+  return scaleTransformWithDynamicFix(a,stationaryPoint,desiredTransformedA,originalTransform,lockX,lockY)
+}
+
 
 function cells(x=1,y=1) {
   let width = 1/x;
@@ -171,4 +357,59 @@ function circleBrush(scale) {
   let value = `url(${newCursor.toDataURL()}) ${offset} ${offset}, auto `;
   if ((newCursor.width < 2) || (newCursor.width>120)) value="crosshair";
   return value;
+}
+
+function cloneEvent(event, modifications = {}) {
+  let eventProperties = {
+    "bubbles": event.bubbles,
+    "cancelBubble": event.cancelBubble,
+    "cancelable": event.cancelable,
+    "composed": event.composed,
+    "currentTarget": event.currentTarget,
+    "defaultPrevented": event.defaultPrevented,
+    "eventPhase": event.eventPhase,
+    "isTrusted": event.isTrusted,
+    "target": event.target,
+    "timeStamp": event.timeStamp,
+    "type": event.type,
+  };
+
+  // Checking if the event is a MouseEvent, add mouse event properties
+  if(event instanceof MouseEvent) {
+      eventProperties = {
+          ...eventProperties,
+          "altKey": event.altKey,
+          "button": event.button,
+          "buttons": event.buttons,
+          "clientX": event.clientX,
+          "clientY": event.clientY,
+          "ctrlKey": event.ctrlKey,
+          "metaKey": event.metaKey,
+          "movementX": event.movementX,
+          "movementY": event.movementY,
+          "offsetX": event.offsetX,
+          "offsetY": event.offsetY,
+          "pageX": event.pageX,
+          "pageY": event.pageY,
+          "relatedTarget": event.relatedTarget,
+          "screenX": event.screenX,
+          "screenY": event.screenY,
+          "shiftKey": event.shiftKey,
+      };
+  }
+
+  return { ...modifications, ...eventProperties  };
+}
+
+function forwardEvent(mouseEvent, recipient) {
+  var rect = recipient.getBoundingClientRect();
+
+  const options = cloneEvent(mouseEvent,{
+    clientX:mouseEvent.clientX - rect.left,
+    clientY:mouseEvent.clientY - rect.top,
+  });
+
+  var newEvent = new MouseEvent(mouseEvent.type, options )
+
+  recipient.dispatchEvent(newEvent);
 }

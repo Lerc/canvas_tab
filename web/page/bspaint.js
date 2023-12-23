@@ -52,6 +52,7 @@ function setActivePic(newValue) {
   if (!activePic) return;
   activePic.bringToFront();
 
+  if (typeof tool.drawUI === "function") tool.drawUI(); 
 }
 
 var dragging = false;
@@ -88,6 +89,9 @@ function closePic(pic) {
   }
 }
 
+
+
+
 var lastUsedMaskColor = "#402040";
 
 class Layer {
@@ -104,6 +108,9 @@ class Layer {
     this.canvas.height=height;
     this.mask = mask;
     this.title= title;
+    this.transform = [1,0 ,0,1, 0,0];
+    this.rotationCenter= {x:width/2,y:height/2};
+    
     if (mask) {
       this.compositeOperation="source-over";
     }
@@ -111,6 +118,12 @@ class Layer {
   get maskColor() {
     return this._maskColor;
   }
+  get width() {
+    return this.canvas.width;
+  }
+  get height() {
+    return this.canvas.height;
+  }  
   set maskColor(newValue) { 
     this._maskColor=newValue;
     if (this.mask) {
@@ -121,6 +134,58 @@ class Layer {
       this.ctx.restore();
     }
   }
+  draw(ctx) {
+    ctx.save();
+    ctx.globalCompositeOperation=this.compositeOperation;
+    ctx.globalAlpha=this.opacity;
+    ctx.setTransform(...this.transform);
+    ctx.drawImage(this.canvas);
+    ctx.restore();    
+  }
+  convertFromPicCoords(x, y) {
+    return reverseTransform({x,y},this.transform)
+  }
+  // Converts coordinates from this layer's coordinates to the picture's canvas
+  convertToPicCoords(x, y) {
+    return applyTransform({x,y},this.transform);
+  }
+
+  rotate(angle) {
+    const radians = angle * Math.PI / 180;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+
+    // Convert relative coordinates to absolute
+    const centerX = this.rotationCenter.x; 
+    const centerY = this.rotationCenter.y;
+
+    // Create a translation matrix to move the rotation point to (0,0)
+    const translateToOrigin = [1, 0, 0, 1, -centerX, -centerY];
+
+    // Create a rotation matrix
+    const rotation = [cos, sin, -sin, cos, 0, 0];
+
+    // Create a translation matrix to move back from (0,0)
+    const translateBack = [1, 0, 0, 1, centerX, centerY];
+
+    // Concatenate the transforms: translate back -> rotate -> translate to origin
+    let combined = concatenateTransforms(translateBack, rotation);
+    combined = concatenateTransforms(combined, translateToOrigin);
+
+    // Apply to the current transform
+    this.transform = concatenateTransforms(this.transform, combined);
+  }
+
+  translate(dx, dy) {
+    const newTransform = [1, 0, 0, 1, dx, dy];
+    this.transform = concatenateTransforms(this.transform, newTransform);
+  }
+
+  scale(sx, sy = sx) {
+    const newTransform = [sx, 0, 0, sy, 0, 0];
+    this.transform = concatenateTransforms(this.transform, newTransform);
+  }
+
 }
 
 function updateMirrorGridButtonImage() {
@@ -159,6 +224,17 @@ function updateMirrors() {
   if($("#mirror_trbl.mirror.button").hasClass("down")) result = composeFunction(result,mirrorDiagonalY1MinusX);
 
   mirrorFunction=result;
+}
+
+function getDrawAreaAtPoint(uiX, uiY) {
+  for (let pic of picStack) {
+    const {x,y} = convertCoordsFromUIToPic(uiX, uiY, pic);
+
+    if (x >= 0 && x <= pic.width && y >= 0 && y <= pic.height) {
+      return pic;
+    }
+  }
+  return null; // No drawArea found at the point
 }
 
 function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
@@ -214,6 +290,8 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
     get canvas() {return canvas},
     get mask() {return mask},
     set mask(m) {mask=m},
+    get width() {return canvas.width},
+    get height() {return canvas.height},
     scale:1,
     scalefactor:0,
     offsetX:0,
@@ -222,7 +300,7 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
     activeLayer:null,
     strokeCoordinates :[], 
     strokeModifier: a=>a,
-    setTransform( ) {
+    setCSSTransform( ) {
       const {element,scale,offsetX,offsetY} = this;
       element.style.setProperty("--scalefactor",scale)
       element.style.setProperty("--translateX",offsetX+"px")
@@ -231,7 +309,7 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
     setPosition(x,y) {
       this.offsetX=x;
       this.offsetY=y;
-      this.setTransform();
+      this.setCSSTransform();
     },
     bringToFront() {
       const oldPos = picStack.indexOf(this);
@@ -258,6 +336,7 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
         if (this.isDrawing && layer===this.activeLayer) {
           canvas.ctx.drawImage(activeOperationCanvas,0,0);          
         } else {
+          canvas.ctx.setTransform(...layer.transform);
           canvas.ctx.drawImage(layer.canvas,0,0);
 
         }
@@ -270,6 +349,7 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
       const undoRecord = {
         type : "layer",
         layer: this.activeLayer,
+        transform: [...this.activeLayer.transform],
         data: this.activeLayer.ctx.getAllImageData()
       }
       undoStack.push(undoRecord);
@@ -277,6 +357,8 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
       redoStack.length=0;
 
       this.activeLayer.ctx.putImageData(data,0,0);
+      this.activeLayer.transform= [1,0 ,0,1, 0,0];
+      
       this.isDrawing = false;
       if (selectedExport===this) {
         if (this.activeLayer===this.mask) {
@@ -337,9 +419,12 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
       if (!updatingStroke) {
         updatingStroke=true;
         setTimeout(_=>{
-          activeOperationCanvas.ctx.clearRect(0,0,activeOperationCanvas.width,activeOperationCanvas.height);
-          activeOperationCanvas.ctx.drawImage(this.activeLayer.canvas,0,0);
-    
+          const ctx = activeOperationCanvas.ctx;
+          ctx.clearRect(0,0,activeOperationCanvas.width,activeOperationCanvas.height);
+          ctx.save()
+          ctx.setTransform(...this.activeLayer.transform);
+          ctx.drawImage(this.activeLayer.canvas,0,0);
+          ctx.restore();
           const unitRange=this.strokeCoordinates.map(({x,y})=>({x:x/canvas.width,y:y/canvas.height}));
 
           const strokes = this.strokeModifier([unitRange])          
@@ -377,63 +462,35 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
       layers.length = 0;  // Clear the existing array
       layers.push(...newList);  // Fill with new values
     },
-/*
-    removeLayer(layer=this.activeLayer) {
-      const i = layers.indexOf(layer);
-      if (i !==-1) {
-        layers.splice(i,1);
-        if (layer === this.activeLayer) {
-          this.activeLayer = layers[Math.min(layers.length-1,i)];
-        }
-      }
-      this.updateVisualRepresentation(true);
-    },
-    addEmptyLayer() {
-      let result = new Layer("new layer", canvas)
-      layers.push(result);      
-      return result;
-    }, 
-    insertLayer(layer, below = null) {
-      const indexExisting = layers.indexOf(layer);
-      if (indexExisting !== -1) {
-        layers.splice(indexExisting, 1);
-      }
-    
-      const indexBelow = layers.indexOf(below);
-      if (indexBelow !== -1) {
-        layers.splice(indexBelow, 0, layer);
-      } else {
-        layers.push(layer);
-      }
-    },
-  */
-    addEmptyLayer() {
+
+    addEmptyLayer(above = this.activeLayer) {
       const newLayer = new Layer(this,"new layer", canvas);
-      const newList = [...layers, newLayer];
-      this.updateLayerList(newList);
+      this.insertLayerAbove(newLayer, above);
+      this.activeLayer = newLayer;
       return newLayer;
     },
-    addDuplicateLayer(layer) {
+    addDuplicateLayer(layer,above=layer) {
       if (!layer) {
           return this.addEmptyLayer();
       } else {
+          if (layers.indexOf(above) < 0) above=this.activeLayer;
           // Duplicate the provided layer
           const newLayer = new Layer(this, layer.title, {width: layer.canvas.width, height: layer.canvas.height}, layer.mask);
           newLayer.ctx.drawImage(layer.canvas, 0, 0); // Copy the content of the original layer
+          newLayer.transform=[...layer.transform];
           newLayer.visible = layer.visible;
           newLayer.compositeOperation = layer.compositeOperation;
           newLayer.opacity = layer.opacity;
-          const newList = [...this.layers, newLayer];
-          this.updateLayerList(newList);  
+          this.insertLayerAbove(newLayer, above);
+          this.activeLayer = newLayer;
           return newLayer;
-      }
-    
+      }    
     },
     removeLayer(layer = this.activeLayer) {
       const newList = layers.filter(l => l !== layer);
       this.updateLayerList(newList);
     },
-    insertLayer(layer, below = null) {
+    insertLayerBelow(layer, below = null) {
       const newList = [...layers];
       const indexExisting = newList.indexOf(layer);
       if (indexExisting !== -1) {
@@ -446,7 +503,21 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
         newList.push(layer);
       }
       this.updateLayerList(newList);
-    },      
+    },
+    insertLayerAbove(layer, above = null) {
+      const newList = [...this.layers];
+      const indexExisting = newList.indexOf(layer);
+      if (indexExisting !== -1) {
+        newList.splice(indexExisting, 1);
+      }
+      const indexAbove = newList.indexOf(above);
+      if (indexAbove !== -1) {
+        newList.splice(indexAbove + 1, 0, layer);
+      } else {
+        newList.unshift(layer); // Inserts at the top if 'above' layer is not found
+      }
+      this.updateLayerList(newList);
+    },    
     undo() {
       const lastRecord = undoStack.pop();
       if (lastRecord) {
@@ -458,9 +529,14 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
           redoStack.push({
             type: 'layer',
             layer: lastRecord.layer,
+            transform : [...lastRecord.layer.transform],
             data: lastRecord.layer.ctx.getAllImageData()
           });
-          lastRecord.layer.ctx.putImageData(lastRecord.data, 0, 0);
+          const ctx = lastRecord.layer.ctx;
+          ctx.save();
+          ctx.setTransform(...lastRecord.transform);
+          ctx.putImageData(lastRecord.data, 0, 0);
+          ctx.restore();
         }
         //... (handle other types of undoRecords)
       }
@@ -479,6 +555,7 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
           undoStack.push({
             type: 'layer',
             layer: lastRecord.layer,
+            transform: [...lastRecord.layer.transform],
             data: lastRecord.layer.ctx.getAllImageData()
           });
           lastRecord.layer.ctx.putImageData(lastRecord.data, 0, 0);
@@ -531,7 +608,7 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
     })
   });
 
-  pic.setTransform();
+  pic.setCSSTransform();
   setActivePic(pic)
   return pic;
   
@@ -556,8 +633,11 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
 
 
 function initPaint(){ 
-  $("#background").val("#ffffff").data("eraser",true);
 
+  // Call this function at initialization
+  window.uiCanvas = initUICanvas();
+
+  $("#background").val("#ffffff").data("eraser",true);
   var palette=$("#palette");
   for (let i of initialPalette) {
     const e=`<div class="paletteentry" style="background-color:${i}"> </div>`;
@@ -606,6 +686,7 @@ function initPaint(){
   $("#eraser")[0].tool=eraserTip;
   $("#fine_eraser")[0].tool=pixelClear;
   $("#eyedropper")[0].tool=eyeDropper;
+  $("#transform")[0].tool=transformTool;
 
   $(".tool.button").on("click",function(e) {setTool(e.currentTarget.tool);});
 
@@ -736,7 +817,7 @@ function addNewLayer(image) {
     layer.ctx.drawImage(image,0,0);    
     console.log("new layer", layer)
     console.log(layer.canvas.width, layer.canvas.height)
-    pic.insertLayer(layer)
+    pic.insertLayerBelow(layer)
     pic.activeLayer=layer;
     updateLayerList();
     pic.updateVisualRepresentation(true);
@@ -826,7 +907,7 @@ function handleMouseLeave(e) {
     console.log({dx,dy})
     pic.offsetX=dragStartX+dx;
     pic.offsetY=dragStartY+dy;
-    pic.setTransform();
+    pic.setCSSTransform();
   }
 
 }
@@ -862,7 +943,7 @@ function handleMouseMove(e) {
     var dy = e.clientY-mouseDownY;
     pic.offsetX=dragStartX+dx;
     pic.offsetY=dragStartY+dy;
-    pic.setTransform();
+    pic.setCSSTransform();
   }
   
   if (pic.isDrawing && e.buttons === 0) {
@@ -880,7 +961,7 @@ function handleMouseWheel(e) {
   const scaleAround= {x:e.pageX,y:e.pageY};
 
   setScale(activePic.scalefactor+direction,scaleAround);
-  activePic.setTransform();
+  activePic.setCSSTransform();
 }
   
 function scalefactorToSize(n) {
@@ -910,12 +991,20 @@ function setScale(newfactor, around) {
 
     pic.scale=newScale;
     pic.scalefactor=newfactor;
-    pic.setTransform();
+    pic.setCSSTransform();
     updateBrushCursor(pic.element);
 }
 
 function setTool(newValue) {
-  tool=newValue;
+  if (newValue !== tool)
+  {
+    tool=newValue;
+    const ctx=uiCanvas.getContext("2d");
+    ctx.clearRect(0,0,1e5,1e5);
+    if (typeof tool?.init === "function") tool.init(); 
+  }
+
+  
   for (const pic of picStack) {
     updateBrushCursor(pic.element)
   }
@@ -926,6 +1015,8 @@ function setTool(newValue) {
     e.classList.toggle("down",(e.tool === tool))
   };
   brushSizeControl.diameter=tip.size;
+  uiCanvas.style.pointerEvents=tool?.eventHandlers?"":"none";
+  
 }
 
 
@@ -1124,7 +1215,7 @@ function poulateLayerControl() {
         if (draggingElement) {
           const layer = draggingElement.layer;
           const below = insertPoint?.layer;
-          activePic.insertLayer(layer,below);
+          activePic.insertLayerBelow(layer,below);
           updateLayerList();
           activePic.updateVisualRepresentation(true);
         } else {
@@ -1185,7 +1276,10 @@ function updateLayerList() {
     window.dummyGlobal=result;
     const canvas = result.querySelector(".thumbnail");    
     const ctx=canvas.getContext("2d");
+    ctx.save()
+    ctx.setTransform(...layer.transform);
     ctx.drawImage(layer.canvas,0,0,canvas.width,canvas.height);  
+    ctx.restore();
     result.layer=layer;
 
     //  Renaming handler
@@ -1291,63 +1385,11 @@ function updateBrushCursor(picElement) {
   let value ="crosshair";
   if (tool.cursorFunction) value = tool.cursorFunction(scale);
   p.style.setProperty("cursor",value);
+  //set matching cursor for user interface overlay;
+  uiCanvas.style.setProperty("cursor",value);
 }
 
 
-function cloneEvent(event, modifications = {}) {
-  let eventProperties = {
-    "bubbles": event.bubbles,
-    "cancelBubble": event.cancelBubble,
-    "cancelable": event.cancelable,
-    "composed": event.composed,
-    "currentTarget": event.currentTarget,
-    "defaultPrevented": event.defaultPrevented,
-    "eventPhase": event.eventPhase,
-    "isTrusted": event.isTrusted,
-    "target": event.target,
-    "timeStamp": event.timeStamp,
-    "type": event.type,
-  };
-
-  // Checking if the event is a MouseEvent, add mouse event properties
-  if(event instanceof MouseEvent) {
-      eventProperties = {
-          ...eventProperties,
-          "altKey": event.altKey,
-          "button": event.button,
-          "buttons": event.buttons,
-          "clientX": event.clientX,
-          "clientY": event.clientY,
-          "ctrlKey": event.ctrlKey,
-          "metaKey": event.metaKey,
-          "movementX": event.movementX,
-          "movementY": event.movementY,
-          "offsetX": event.offsetX,
-          "offsetY": event.offsetY,
-          "pageX": event.pageX,
-          "pageY": event.pageY,
-          "relatedTarget": event.relatedTarget,
-          "screenX": event.screenX,
-          "screenY": event.screenY,
-          "shiftKey": event.shiftKey,
-      };
-  }
-
-  return { ...modifications, ...eventProperties  };
-}
-
-function forwardEvent(mouseEvent, recipient) {
-  var rect = recipient.getBoundingClientRect();
-
-  const options = cloneEvent(mouseEvent,{
-    clientX:mouseEvent.clientX - rect.left,
-    clientY:mouseEvent.clientY - rect.top,
-  });
-
-  var newEvent = new MouseEvent(mouseEvent.type, options )
-
-  recipient.dispatchEvent(newEvent);
-}
 
 function createCaptureOverlay(element) {
   var overlay = document.createElement('div');
@@ -1406,3 +1448,8 @@ hotkeys["E"] = _=>{setTool(eraserTip);}
 hotkeys["]"] = _=>{brushSizeControl.diameter+=1}
 hotkeys["["] = _=>{brushSizeControl.diameter-=1;}
 
+
+hotkeys["Q"] = _=>{
+  
+  drawPicFramesOnUICanvas(uiCanvas, picStack);  
+}
