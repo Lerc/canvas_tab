@@ -1444,6 +1444,7 @@ hotkeys["P"] = _=>{setTool(eyeDropper);}
 hotkeys["B"] = _=>{setTool(feltTip);}
 hotkeys["Z"] = _=>{setTool(pixelTip);}
 hotkeys["E"] = _=>{setTool(eraserTip);}
+hotkeys["T"] = _=>{setTool(transformTool);}
 
 hotkeys["]"] = _=>{brushSizeControl.diameter+=1}
 hotkeys["["] = _=>{brushSizeControl.diameter-=1;}

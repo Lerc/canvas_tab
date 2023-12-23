@@ -2,6 +2,7 @@
 ComfyUI canvas editor page
 
 ## Updates 
+ - 2023-12-23 Added tool to scale and rotate layers (Hotkey is T,  doubleClick on image to toggle between Rotate and Scale mode)
  - 2023-12-4  Added hotkeys for Brush Radius,  Added Duplicate Layer button.  Ctrl-Click duplicates the target layer.  
  - 2023-12-2  Added Trigger Queue on change toggle.   
  - 2023-11-30 Added  "Replace Targeted Layer" as an input mode,  right click on a layer to set it as target to be replaced
@@ -42,6 +43,7 @@ send images directly to the editor.
  - E for Erase tool
  - Z for pixel editing tool
  - P for color Picker
+ - T for layer transformation
  - [ and ] to decrease and increase bush radius
  - BackSpace to clear a layer
  - ALT_BackSpace to fill the layer with the foreground color

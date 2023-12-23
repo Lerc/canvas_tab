@@ -238,6 +238,7 @@ const transformTool = (_=> {  //closure
 
   const tool = {
     init() {
+      rotateMode=false;
       this.drawUI();
     },
     drawOperation() {
