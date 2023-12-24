@@ -231,6 +231,7 @@ const transformTool = (_=> {  //closure
   let dragHandler;
   let mouseDownPosition
   let preserveAspect = false;
+  let moved = false;
   let scaleHandlers= [
     dragTopLeft,dragTopRight,dragBottomRight,dragBottomLeft,dragTop,dragRight,dragBottom,dragLeft
   ];
@@ -331,6 +332,8 @@ const transformTool = (_=> {  //closure
           mouseDownTransform=[...layer.transform];
           mouseDownPosition = {x:e.offsetX,y:e.offsetY}          
           console.log({mouseDownAngle})
+          moved=false;
+
         }
       }
     },
@@ -340,7 +343,14 @@ const transformTool = (_=> {  //closure
     mousemove(e) { 
       
       if ((e.buttons && 1) !== 1) dragStop();
-      if (dragHandler) dragHandler(e);
+      if (dragHandler) {
+        if (!moved) {
+          activePic.addUndoRecord(layer.undoTransformRecord());
+          moved=true;
+        }
+        dragHandler(e);
+
+      }
       tool.drawUI();
 
     },
@@ -446,27 +456,6 @@ const transformTool = (_=> {  //closure
     activePic.updateVisualRepresentation();
   }
 
-  function rotateTopRight(e) {
-    
-  }
-  function rotateBottomLeft(e) {
-    
-  }
-  function rotateBottomRight(e) {
-    
-  }
-  function rotateTop(e) {
-    
-  }
-  function rotateBottom(e) {
-    
-  }
-  function rotateLeft(e) {
-    
-  }
-  function rotateRight(e) {
-    
-  }
 
 
   return tool;

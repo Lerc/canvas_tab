@@ -139,7 +139,7 @@ class Layer {
     ctx.globalCompositeOperation=this.compositeOperation;
     ctx.globalAlpha=this.opacity;
     ctx.setTransform(...this.transform);
-    ctx.drawImage(this.canvas);
+    ctx.drawImage(this.canvas,0,0);
     ctx.restore();    
   }
   convertFromPicCoords(x, y) {
@@ -184,6 +184,23 @@ class Layer {
   scale(sx, sy = sx) {
     const newTransform = [sx, 0, 0, sy, 0, 0];
     this.transform = concatenateTransforms(this.transform, newTransform);
+  }
+
+  undoRecord() {
+    return {
+      type: 'layer',
+      layer: this,
+      compositeOperation: this.compositeOperation,
+      transform : [...this.transform],
+      data: this.ctx.getAllImageData()
+    }
+  }
+  undoTransformRecord() {
+    return {
+      type:"layerTransform",
+      layer:this,
+      transform:[...this.transform]
+    }
   }
 
 }
@@ -336,9 +353,7 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
         if (this.isDrawing && layer===this.activeLayer) {
           canvas.ctx.drawImage(activeOperationCanvas,0,0);          
         } else {
-          canvas.ctx.setTransform(...layer.transform);
-          canvas.ctx.drawImage(layer.canvas,0,0);
-
+          layer.draw(canvas.ctx);
         }
       }
       canvas.ctx.restore();
@@ -390,6 +405,7 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
         transmitCanvas(canvas);          
       }
       this.composite(false);
+      if (typeof tool?.drawUI === "function") tool.drawUI(); 
     },
 
     startDraw(x,y) {
@@ -518,6 +534,11 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
       }
       this.updateLayerList(newList);
     },    
+    addUndoRecord(record) {
+      undoStack.push(record);
+      if (undoStack.length > undoDepth) undoStack.shift();
+      redoStack.length=0;
+    },
     undo() {
       const lastRecord = undoStack.pop();
       if (lastRecord) {
@@ -529,14 +550,17 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
           redoStack.push({
             type: 'layer',
             layer: lastRecord.layer,
+            compositeOperation: lastRecord.layer.compositeOperation,
             transform : [...lastRecord.layer.transform],
             data: lastRecord.layer.ctx.getAllImageData()
           });
+          layer.transform=[...lastRecord.transform];
+          layer.compositeOperation=lastRecord.compositeOperation;
           const ctx = lastRecord.layer.ctx;
-          ctx.save();
-          ctx.setTransform(...lastRecord.transform);
           ctx.putImageData(lastRecord.data, 0, 0);
-          ctx.restore();
+        } else if (lastRecord.type==="layerTransform") {
+          redoStack.push(lastRecord.layer.undoTransformRecord());
+          lastRecord.layer.transform=[...lastRecord.transform];
         }
         //... (handle other types of undoRecords)
       }
@@ -555,10 +579,16 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
           undoStack.push({
             type: 'layer',
             layer: lastRecord.layer,
-            transform: [...lastRecord.layer.transform],
+            compositeOperation: lastRecord.layer.compositeOperation,
+            transform: [...lastRecord.layer.transform],            
             data: lastRecord.layer.ctx.getAllImageData()
           });
+          lastRecord.layer.transform=[...lastRecord.transform];
+          lastRecord.layer.compositeOperation=lastRecord.compositeOperation;
           lastRecord.layer.ctx.putImageData(lastRecord.data, 0, 0);
+        } else if (lastRecord.type==="layerTransform") {
+          redoStack.push(lastRecord.layer.undoTransformRecord());
+          lastRecords.layer.transform=[...lastRecord.transform];
         }
         //... (handle other types of redoRecords)
       }
