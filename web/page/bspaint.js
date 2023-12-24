@@ -554,8 +554,8 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
             transform : [...lastRecord.layer.transform],
             data: lastRecord.layer.ctx.getAllImageData()
           });
-          layer.transform=[...lastRecord.transform];
-          layer.compositeOperation=lastRecord.compositeOperation;
+          lastRecord.layer.transform=[...lastRecord.transform];
+          lastRecord.layer.compositeOperation=lastRecord.compositeOperation;
           const ctx = lastRecord.layer.ctx;
           ctx.putImageData(lastRecord.data, 0, 0);
         } else if (lastRecord.type==="layerTransform") {
