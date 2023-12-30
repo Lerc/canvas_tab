@@ -312,9 +312,9 @@ const transformTool = (_=> {  //closure
         }
         if (!dragHandler) {
           if (  mousePos.x >0  && 
-                mousePos.x<=layer.width &&
+                mousePos.x<=activePic.width &&
                 mousePos.y >0  && 
-                mousePos.y<=layer.height
+                mousePos.y<=activePic.height
             ) {
               dragHandler=translateHandler;
             }
@@ -373,6 +373,7 @@ const transformTool = (_=> {  //closure
   
   function dragStop() {
     dragHandler=null;
+    updateLayerList();
   }
 
   function doubleClickHandler(e) {

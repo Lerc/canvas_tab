@@ -114,15 +114,16 @@ class Layer {
   compositeOperation = "source-over";
   opacity = 1;
   _maskColor = lastUsedMaskColor;
-  constructor (pic,title, {width,height}, mask = false)  {
+  constructor (pic,title, {width,height}=pic, mask = false)  {
     this.parentPic = pic;
     this.canvas.width=width;
     this.canvas.height=height;
     this.mask = mask;
     this.title= title;
-    this.transform = [1,0 ,0,1, 0,0];
+    const offsetX=(pic.width-width)/2;
+    const offsetY=(pic.height-height)/2;0
+    this.transform = [1,0 ,0,1, offsetX,offsetY];
     this.rotationCenter= {x:width/2,y:height/2};
-    
     if (mask) {
       this.compositeOperation="source-over";
     }
@@ -489,14 +490,28 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
       if (undoStack.length > undoDepth) undoStack.shift();
       layers.length = 0;  // Clear the existing array
       layers.push(...newList);  // Fill with new values
+      if (activePic===this) {
+        //do UI update if this is the active pic.
+        updateLayerList()
+      }
     },
 
-    addEmptyLayer(above = this.activeLayer) {
-      const newLayer = new Layer(this,"new layer", canvas);
+    addEmptyLayer(above = this.activeLayer,name="new layer") {
+      const newLayer = new Layer(this,name, canvas);
       this.insertLayerAbove(newLayer, above);
       this.activeLayer = newLayer;
       return newLayer;
     },
+    addLayerFromImage(image,above = this.activeLayer,name="new layer") {
+      const newLayer = new Layer(this,name, image);
+      newLayer.ctx.drawImage(image,0,0);
+      this.insertLayerAbove(newLayer, above);
+      this.activeLayer = newLayer;
+      this.updateVisualRepresentation(true);      
+      return newLayer;
+
+    },
+
     addDuplicateLayer(layer,above=layer) {
       if (!layer) {
           return this.addEmptyLayer();
@@ -1318,9 +1333,11 @@ function updateLayerList() {
     window.dummyGlobal=result;
     const canvas = result.querySelector(".thumbnail");    
     const ctx=canvas.getContext("2d");
+    const scaleFactor = canvas.width/pic.width;
     ctx.save()
-    ctx.setTransform(...layer.transform);
-    ctx.drawImage(layer.canvas,0,0,canvas.width,canvas.height);  
+    ctx.scale(scaleFactor,scaleFactor)
+    ctx.transform(...layer.transform);
+    ctx.drawImage(layer.canvas,0,0);  
     ctx.restore();
     result.layer=layer;
 
@@ -1471,6 +1488,24 @@ function fillOrClear(from) {
     activePic?.fillLayer(from.val());
   }   
 }
+
+document.addEventListener('paste', async (event) => {
+  const items = event.clipboardData.items;
+
+  for (const item of items) {
+      if (item.type.startsWith('image')) {
+          const imageFile = item.getAsFile();
+          const image = new Image();
+          image.src = URL.createObjectURL(imageFile);
+
+          image.onload = () => {
+             if (activePic) {
+              activePic.addLayerFromImage(image,activePic.activeLayer,imageFile.name);
+             }
+          };
+      }
+  }
+});
 
 
 
