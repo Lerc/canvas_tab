@@ -186,19 +186,24 @@ svg.tool.button {
   top:var(--top-panel-height);
   width:var(--left-panel-width);
   bottom:0px;
+  line-height: 19px;
+  padding:6px;
 }
 .paletteentry {
-    width :32px;
-    height :32px;
+    width :18px;
+    height :18px;
     display:inline-block;
     border:1px solid black;
-    margin : 3px;
+    margin : 0px;
+    box-shadow:0px 0px 2px 1px;
 }
 
 .paletteentry.erase {
-  width: 72px;
+  width: 78px;
+  height:32px;
   text-align: center;
   line-height: 32px;
+
 }
 
 #workspace{
