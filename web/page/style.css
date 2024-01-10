@@ -1,15 +1,51 @@
+body {
+  --top-panel-height : 64px;
+  --left-panel-width : 80px;
+  --right-panel-width : 210px;
+
+  --label : "image";
+
+
+  --base-color: #f8fcff;
+  --hover-color: #eee;
+  --highlight-color: #FFF;
+  --content-color : #111;
+  --workspace-color: lightgrey;
+
+}
+
+@media (prefers-color-scheme:dark) {
+
+  body{
+    --base-color: #333;
+    --hover-color: #336;
+    --highlight-color: #448;
+    --content-color : #ffe;
+    --workspace-color: #444;
+  }
+
+  .button, .diameter_control, input[type="text"],input[type="number"], select , button, .layer_actions {
+    filter: invert(0.8);
+  }
+
+  .titlebar {
+    color:#000;
+  }
+}
+
+
+
 
 body {
   margin: 0;
   font-family: sans-serif;
-  --top-panel-height : 64px;
-  --left-panel-width : 80px;
-  --right-panel-width : 210px;
-  background:#f8fcff;
-  --label : "image";
+
+  background: var(--base-color);
+  color: var(--content-color);
   width:100vw;
   height:100vh;
 }
+
 
 @media (max-width: 1250px) {
   body  {
@@ -22,7 +58,7 @@ body {
 }
 canvas {
   display: block;
-  box-shadow: 0px 0px 0px 2px;
+  box-shadow: 0px 0px 0px 2px #000;
 }
 .noselect {
 -webkit-touch-callout: none;
@@ -56,18 +92,18 @@ canvas {
   margin:2px;
   background-color : #ddd;
   box-sizing: border-box;
-  box-shadow: -1px -1px 1px 1px black inset, 1px 1px 1px 1px white inset;
+  box-shadow: -1px -1px 1px 1px var(--content-color) inset, 1px 1px 1px 1px var(--highlight-color) inset;
 }
 .button:hover {
-  background-color : #eee;
+  background-color : #eee; 
 }
 .button:active {
-  background-color : white;
-  box-shadow: 1px 1px 1px 1px black inset, -1px -1px 1px 1px white inset;
+  background-color : #fff;
+  box-shadow: 1px 1px 1px 1px var(--content-color) inset, -1px -1px 1px 1px var(--highlight-color) inset;
 }
 .button.down {
-  background-color : #FFF;
-  box-shadow: 1px 1px 1px 1px black inset, -1px -1px 1px 1px white inset;
+  background-color : #fff;
+  box-shadow: 1px 1px 1px 1px var(--content-color) inset, -1px -1px 1px 1px var(--highlight-color) inset;
 }
 
 .tool.button {
@@ -109,7 +145,7 @@ svg.tool.button {
 
 .subpanel {
   display: inline-block;
-  border-left: 1px solid black;
+  border-left: 1px solid var(--content-color);
   padding-left: 6px;
   height: var(--top-panel-height);
   vertical-align: top;
@@ -190,12 +226,11 @@ svg.tool.button {
   padding:6px;
 }
 .paletteentry {
-    width :18px;
-    height :18px;
+    width :20px;
+    height :20px;
     display:inline-block;
-    border:1px solid black;
     margin : 0px;
-    box-shadow:0px 0px 2px 1px;
+    box-shadow:0px 0px 2px 1px black;
 }
 
 .paletteentry.erase {
@@ -214,13 +249,13 @@ svg.tool.button {
   top: calc( var(--top-panel-height) + 4px);
   bottom:0px;
   overflow:hidden;
-  background-color:lightgrey;
+  background-color:var(--workspace-color);
   margin: 4px;
   box-shadow: 0px 0px 2px 2px black;
 }
 .pic {
   cursor:crosshair;
-  background-color:White;
+  background-color:var(--base-color);
   background-image: linear-gradient(rgba(32,100,150,.05), transparent 2px),
   linear-gradient(90deg, rgba(32,100,150,.05) 2px, transparent 2px),
   linear-gradient(rgba(32,100,150,.1) 1px, transparent 1px),
@@ -476,6 +511,7 @@ input[type="color"] {
   color:red;
   content: "◎";
 }
+
 #layer_control .layer_name_input {
   width: 80%; 
   border: none;
@@ -532,6 +568,21 @@ input[type="color"] {
 
 .layer_widget.active {
   background: cornsilk;
+}
+
+@media (prefers-color-scheme:dark) {
+  .layer_widget.active {
+    background: #639;
+    color:aquamarine;
+  }
+
+  .layer_widget.target .layer_name::before {
+    color: #f88;
+    content: "◎";
+  }
+  .visibilitybox {
+    filter:invert(1);
+  } 
 }
 
 
@@ -641,7 +692,8 @@ input.maskColor {
 }
 
 .modal-content {
-  background-color: #fefefe;
+  background-color: var(--base-color);
+  color: var(--content-color);
   margin: 15% auto;
   padding: 20px;
   padding-bottom:60px;
