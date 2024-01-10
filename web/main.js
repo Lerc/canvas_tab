@@ -1,6 +1,6 @@
-import { app } from "/scripts/app.js";
-import { api } from "/scripts/api.js"
-import { ComfyWidgets } from "/scripts/widgets.js";
+import { app } from "../../scripts/app.js";
+import { api } from "../../scripts/api.js"
+import { ComfyWidgets } from "../../scripts/widgets.js";
 
 let autoQueueInProgress = false;
 let anotherQueueWaiting = false;
@@ -13,7 +13,7 @@ let editor= {};  // one image editor for all nodes, otherwise communication is m
                   // to serve multiple nodes.
 
 const plugin_name = "canvas_link";
-const editor_path = "/extensions/canvas_tab/page/index.html"
+const editor_path = "./extensions/canvas_tab/page/index.html"
 
 function setSignal(key) {
     const keyName = plugin_name+":"+key;
