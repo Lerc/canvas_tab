@@ -252,6 +252,24 @@ input[type="color"] {
   border:none;
   outline:none;
 }
+
+#brush_opacity {
+  width:100%;
+  padding:0;
+  margin:0;
+  position:relative;
+}
+#brush_opacity input {
+  width:100%;
+  box-sizing:border-box;
+}
+#brush_opacity label{
+  font-size:small;
+}
+#brush_opacity output{
+  font-size:small;
+}
+
 #foreground {
   position: absolute;
   bottom : 32px;

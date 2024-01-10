@@ -363,7 +363,7 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
         if (!layer.visible) continue;        
         canvas.ctx.globalAlpha = layer.opacity;
         canvas.ctx.globalCompositeOperation=layer.compositeOperation;
-        if (this.isDrawing && layer===this.activeLayer) {
+        if (this.isDrawing && layer===this.activeLayer) {          
           canvas.ctx.drawImage(activeOperationCanvas,0,0);          
         } else {
           layer.draw(canvas.ctx);
@@ -456,11 +456,15 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
           ctx.restore();
           const unitRange=this.strokeCoordinates.map(({x,y})=>({x:x/canvas.width,y:y/canvas.height}));
 
+          ctx.save();
+          const opacity = $("#brush_opacity input[type=range]").val()/100;
+          ctx.globalAlpha=opacity;
           const strokes = this.strokeModifier([unitRange])          
           for (const unitStroke of strokes) {
             const stroke=unitStroke.map(({x,y})=>({x:x*canvas.width,y:y*canvas.height}));
             tip.tool.drawOperation(activeOperationCanvas.ctx,tip,stroke)
           }
+          ctx.restore();
           if (this.activeLayer.mask) {
             const ctx=activeOperationCanvas.ctx;
             ctx.save();
@@ -830,7 +834,8 @@ function initPaint(){
   });
   
 
-
+  $("input.percentage").on("change",processPercentageInput);
+  $("input.percentage~input").on("input",processPercentageRange);
   window.test1=createDrawArea(undefined,"Image A");
   window.test2=createDrawArea(undefined,"Image B");
   test1.setPosition(30,60) ;
@@ -1507,8 +1512,28 @@ document.addEventListener('paste', async (event) => {
   }
 });
 
+function processPercentageInput(e) {
+  let element = e.currentTarget;
+  if (!element.hasOwnProperty("lastGoodValue")) element.lastGoodValue=100;
+  let range = element.parentElement.querySelector("input[type=range]");
+  let value = parseFloat(element.value);
+  if (Number.isNaN(value)) {
+    value=element.lastGoodValue;
+  }
+  value=Math.floor(value);
+  if (range) {
+    range.value=value;
+    value=range.value;
+  }
+  element.value=`${value}%`;
+}
 
-
+function processPercentageRange(e) {
+  const range = e.currentTarget;
+  console.log(range.value);
+  const input = range.parentNode.querySelector(".percentage")
+  input.value = ""+range.value+"%";
+}
 
 hotkeys["CTRL_Z"] = _=>{activePic?.undo()}
 hotkeys["CTRL_SHIFT_Z"] = _=>{activePic?.redo()}
