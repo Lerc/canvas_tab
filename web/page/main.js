@@ -31,21 +31,22 @@ if (location.pathname.includes("/page/")) {
 
 let portToMain; // variable to hold the MessageChannel port
 
-function transmitCanvas(canvas) {
+function transmitCanvas(canvas,title="",selected=true) {
     if (portToMain) {
         canvas.toBlob( blob=>{
-          portToMain.postMessage( {"image": blob} );      
+          portToMain.postMessage( {"image": blob,title,selected} );      
         });
       }
   }
 
-function transmitMask(canvas) {
+function transmitMask(canvas,title="",selected=true) {
     if (portToMain) {
         canvas.toBlob( blob=>{
-          portToMain.postMessage( {"mask": blob} );      
+          portToMain.postMessage( {"mask": blob,title,selected} );      
         });
       }
   }
+
 
 
 function loadImagefromURL(url) {

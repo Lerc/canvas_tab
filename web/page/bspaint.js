@@ -89,7 +89,8 @@ function setExportPic(pic) {
   button.classList.add("output");
 
   pic.updateVisualRepresentation(true);
-  transmitMask(pic.mask.canvas);
+  transmitMask(pic.mask.canvas,pic.title,true);
+  
 }
 
 function closePic(pic) {
@@ -322,6 +323,7 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
     set mask(m) {mask=m},
     get width() {return canvas.width},
     get height() {return canvas.height},
+    get title() {return title.textContent},
     scale:1,
     scalefactor:0,
     offsetX:0,
@@ -388,15 +390,14 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
       this.activeLayer.transform= [1,0 ,0,1, 0,0];
       
       this.isDrawing = false;
-      if (selectedExport===this) {
+      //if (selectedExport===this) {
         if (this.activeLayer===this.mask) {
-          transmitMask(this.mask.canvas);
+          transmitMask(this.mask.canvas,this.title,selectedExport===this);
         } else {
           this.composite(true);
-          transmitCanvas(canvas);          
-        }
-        
-      }
+          transmitCanvas(canvas,this.title,selectedExport===this);          
+        }        
+      //}
       if (activePic===this) {  
         updateLayerList();  //inefficient to remake all controls on edit,  fix this
       }
@@ -413,9 +414,9 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
       this.commit();
     },
     updateVisualRepresentation(transmit=true) {
-      if (transmit && this===selectedExport) {
+      if (transmit) {
         this.composite(true); //suppress mask for transmitted canvas
-        transmitCanvas(canvas);          
+        transmitCanvas(canvas,this.title,this===selectedExport);          
       }
       this.composite(false);
       if (typeof tool?.drawUI === "function") tool.drawUI(); 
@@ -864,7 +865,6 @@ function addNewImage(image) {
     
     let result =createDrawArea(target);
     $("#workspace").append(result.element);
-    //transmitCanvas(target);
     return(result)
 }
 
@@ -919,7 +919,15 @@ function handleMouseDown(e) {
   setActivePic(pic);
   
   const maskLayer = activePic.activeLayer.mask
+  if (e.altKey) {
+    switch (e.button) {
+      case 0:      
 
+      break;
+
+    }
+    return;
+  }
   
   switch (e.button) {
     case 0:      

@@ -2,6 +2,8 @@
 ComfyUI canvas editor page
 
 ## Updates 
+ - 2024-1-24 Added multi canvas node support.
+ - 2024-1-11 Added CSS for prefers-color-scheme:dark
  - 2023-12-23 Added tool to scale and rotate layers (Hotkey is T,  doubleClick on image to toggle between Rotate and Scale mode)
  - 2023-12-4  Added hotkeys for Brush Radius,  Added Duplicate Layer button.  Ctrl-Click duplicates the target layer.  
  - 2023-12-2  Added Trigger Queue on change toggle.   
@@ -25,6 +27,9 @@ Drag images around with the middle mouse button and scale them with the mouse wh
 
 There is a green Tab on the side of images in the editor,  click on that tab to highlight it. 
 The image with the highlighted tab is sent through to the comfyUI node. 
+
+Multiple Canvas Tab nodes are supported,  If the title of the node and the title of the image in the editor are set to the same name
+The output of the canvas editor will be sent to that node.
 
 You can have multiple image layers and you can select generated images to be 
 added as a new layer, replace an existing layers, or as a new image.  
@@ -52,7 +57,8 @@ send images directly to the editor.
  - CTRL_SHIFT_Z redo
 
 
-##Why would you do such a thing?
+
+## Why would you do such a thing?
 
 My main motivation for making this was to develop an inpainting workflow, 
 but I have also found it quite useful for scribble based images, 

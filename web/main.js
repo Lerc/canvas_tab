@@ -41,7 +41,7 @@ function checkAndClear(key) {
 function handleStatusUpdate(e) {
   const detail = e.detail;
   if (detail?.exec_info?.queue_remaining === 0) {
-    console.log({anotherQueueWaiting,autoQueueInProgress})
+    //console.log({anotherQueueWaiting,autoQueueInProgress})
     if (anotherQueueWaiting) {
       app.queuePrompt();
       anotherQueueWaiting=false;
@@ -99,7 +99,7 @@ function initEditorNode(node)
   node.collected_images = [];
   node.addWidget("button","Edit","bingo", (widget,graphCanvas, node, {x,y}, event) => focusEditor(node));
   node.triggerQueue=node.addWidget("toggle","Queue on change",false,_=>{});
-  node.widgets.reverse();// because auto created widget get put in first
+  node.widgets.reverse();// because auto created widgets get put in first
 
   node.canvasWidget=node.widgets[2];
   node.maskWidget=node.widgets[3];
@@ -138,7 +138,6 @@ function addDragDropSupport(node) {
 
 }
 function transmitImages(images) {
-  console.log("transmit",editor)
   if (!editor.window || editor.window.closed) openEditor();
 
   if(editor.channel) {
@@ -274,8 +273,7 @@ function addCanvasWidget(node,name,inputData,app) {
           widget.uploadedBlobName = result.name;
           widget.sendBlobRequired=false;
         }
-      }
-      console.log(widget)
+      }      
       return widget.uploadedBlobName;
     }
   }
@@ -324,8 +322,16 @@ function handleWindowMessage(e) {
 }
 
 async function messageFromEditor(event) {
-  const nodes =  app.graph.findNodesByType("Canvas_Tab");
+  let nodes =  app.graph.findNodesByType("Canvas_Tab");
   //send same thing to all of the Canvas_Tab nodes
+  const {title, selected} = event.data;
+  
+  console.log({title,selected});
+  if (title) {
+    
+    let targetNodes = nodes.filter(node=>node.title==title || (node.title=="Edit In Another Tab" && selected));
+    nodes=targetNodes;
+  }
   let queue = false;
   if (event.data.image instanceof Blob) {
     for (const node of nodes) {
