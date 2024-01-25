@@ -31,6 +31,8 @@ node for a single generation to get a sharper output to use as a new source imag
 This workflow uses the ControlLLite depthmap model,   It requires creating another image in the canvas editor
 with the new image button and setting the title to "Depth".  The workflow contains a canvas node with the title "Depth",  when an image matches the canvas node title the node will be updated directly from that image.
 
+https://private-user-images.githubusercontent.com/139390/299817528-4285f866-c2a5-404b-8407-45d1f3167593.mp4
+
 https://raw.githubusercontent.com/Lerc/canvas_tab/main/workflows/MultiTarget.mp4
 
 
