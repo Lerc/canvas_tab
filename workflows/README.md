@@ -24,12 +24,13 @@ this workflow contains a node for sharpening the image that can reduce this prob
 is set to bypass meaning it takes no time and has no effect.   If the image becomes blurry you can reactivate this
 node for a single generation to get a sharper output to use as a new source image.
 
-
 ## Multi Canvas with ControlNet
 
 ![turbo workflow](https://raw.githubusercontent.com/Lerc/canvas_tab/main/workflows/TurboLLiteDepth.svg)
 This workflow uses the ControlLLite depthmap model,   It requires creating another image in the canvas editor
 with the new image button and setting the title to "Depth".  The workflow contains a canvas node with the title "Depth",  when an image matches the canvas node title the node will be updated directly from that image.
+
+This workflow has a small sub-unit for generating a depth map from an existing Image  That subunit will sit idle unless you feed it an image,  It can be useful to refine a manually drawn depthmap by calulating a depthmap from a generated image.  Drop the generated image into this subunit to aquire a calculated depthmap.  
 
 https://private-user-images.githubusercontent.com/139390/299817528-4285f866-c2a5-404b-8407-45d1f3167593.mp4
 
